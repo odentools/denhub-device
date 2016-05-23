@@ -1,6 +1,6 @@
 # denhub-device
 
-The Device Daemon Kit for [denhub](https://github.com/odentools/denhub) platform.
+The Device Daemon Kit for [Denhub](https://github.com/odentools/denhub) platform.
 It includes the generator for create your daemon.
 
 This project is development phase.
