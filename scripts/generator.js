@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * Generator for DenHub-Device
  * https://github.com/odentools/denhub-device
