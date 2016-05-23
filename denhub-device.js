@@ -440,7 +440,13 @@ DenHubDevice.prototype._initPlugins = function (plugin_name, callback) {
 	// Initialize the plugins
 	PLUGIN_TYPES.forEach(function (plugin_type, i) {
 
-		var file_list = fs.readdirSync(plugin_dir_base_path + '/' + plugin_type);
+		var file_list = [];
+		try {
+			file_list = fs.readdirSync(plugin_dir_base_path + '/' + plugin_type);
+		} catch (e) {
+			return;
+		}
+		
 		file_list.forEach(function (plugin_filename, i) {
 			if (plugin_filename.match(/^([a-zA-Z0-9_\-]+)\.js$/)) {
 
