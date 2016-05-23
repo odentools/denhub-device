@@ -151,7 +151,7 @@ function generateManifest (old_config) {
 			}]).then(function (answer) {
 
 				if (!answer.continueConfirm) {
-					console.log(colors.bold('\nAll was completed :)'));
+					console.log(colors.bold.green('\nAll was completed :)'));
 					return;
 				}
 
@@ -304,7 +304,7 @@ CommandsHandler.prototype.' + cmd_name + ' = function (args, cb_runner) {\n\
 		}]).then(function (answer) {
 
 			if (!answer.confirmSaveHandlerJs) {
-				console.log(colors.bold('\nAll was completed :)'));
+				console.log(colors.bold.green('\nAll was completed :)'));
 			}
 
 			// Save the commands handler script
@@ -313,8 +313,10 @@ CommandsHandler.prototype.' + cmd_name + ' = function (args, cb_runner) {\n\
 			console.log('Writing has been completed.\n');
 
 			// Done
-			console.log(colors.bold('\nAll was completed :)\n'));
-			console.log(colors.bold('Finally, please execute the following command by yourself.\n'));
+			console.log(colors.bold.green('\nAll was completed :)\n'));
+			console.log('--------------------------------------------------\n');
+			console.log(colors.bold.blue('Finally, please execute the following commands by yourself.'));
+			console.log('For details, please refer to https://github.com/odentools/denhub-device/');
 			console.log('\n\
 $ npm init\n\
 ...\n\
@@ -324,10 +326,10 @@ entry point: (index.js) index.js\n\
 \n\
 $ npm install --save denhub-device\n\
 \n\
+\n\
 $ vim package.json\n\
 {\n\
   ...\n\
-  "main": "index.js",\n\
   "scripts": {\n\
 	"start": "node index.js",\n\
 	...\n\
@@ -335,7 +337,8 @@ $ vim package.json\n\
   ...\n\
 }\n\
 \n\
-$ npm start\n');
+\n\
+$ npm start -- --development\n');
 
 		});
 

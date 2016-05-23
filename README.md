@@ -56,21 +56,26 @@ please create your server before you trying to run the following steps.
 	...
 	entry point: (index.js) index.js
 	...
-	
+
 
 	$ npm install --save denhub-device
 
 	$ vim package.json
 	{
 	  ...
-	  "main": "index.js",
 	  "scripts": {
-	    "start": "node index.js",
-	    "test": "echo \"Error: no test specified\" && exit 1"
+	    "start": "node index.js"
+		...
 	  },
 	  ...
 	}
 
+
+Run the daemon as development mode:
+
+	$ npm start -- --development
+
+Run the daemon as production mode:
 
 	$ npm start
 
