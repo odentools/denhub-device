@@ -8,10 +8,10 @@
 
 var WebSocket = require('ws');
 
-var HandlerHelper = require(__dirname + '/handler-helper'),
-	HandlerCallbackRunner = require(__dirname + '/handler-callback-runner'),
-	HandlerLogger = require(__dirname + '/handler-logger'),
-	helper = require(__dirname + '/helper');
+var HandlerHelper = require(__dirname + '/models/handler-helper'),
+	HandlerCallbackRunner = require(__dirname + '/models/handler-callback-runner'),
+	HandlerLogger = require(__dirname + '/models/handler-logger'),
+	helper = require(__dirname + '/models/helper');
 
 
 /**
@@ -431,7 +431,7 @@ DenHubDevice.prototype._initPlugins = function (plugin_name, callback) {
 	var self = this;
 
 	var fs = require('fs');
-	var plugin_dir_base_path = __dirname + '/../plugins';
+	var plugin_dir_base_path = __dirname + '/plugins';
 
 	self.pluginInstances = {};
 

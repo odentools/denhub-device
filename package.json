@@ -2,7 +2,7 @@
   "name": "denhub-device",
   "version": "0.1.0",
   "description": "Device daemon for DenHub platform",
-  "main": "index.js",
+  "main": "denhub-device.js",
   "scripts": {
     "pretest": "eslint .",
     "test": "mocha tests/*.js"

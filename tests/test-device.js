@@ -3,7 +3,7 @@
  */
 
 var assert = require('assert'),
-	DenHubDevice = require(__dirname + '/../models/denhub-device.js');
+	DenHubDevice = require(__dirname + '/../denhub-device.js');
 
 // Make a commands handler
 var CommandsHandler = function (config, logger, helper) {
