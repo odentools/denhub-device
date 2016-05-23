@@ -313,14 +313,28 @@ CommandsHandler.prototype.' + cmd_name + ' = function (args, cb_runner) {\n\
 			console.log('Writing has been completed.\n');
 
 			// Done
-			console.log(colors.bold('\nAll was completed :)'));
+			console.log(colors.bold('\nAll was completed :)\n'));
+			console.log(colors.bold('Finally, please execute the following command by yourself.\n'));
 			console.log('\n\
-Finally, please execute the following command by yourself.\n\
 $ npm init\n\
 ...\n\
 entry point: (index.js) index.js\n\
 ...\n\
+\n\
+\n\
 $ npm install --save denhub-device\n\
+\n\
+$ vim package.json\n\
+{\n\
+  ...\n\
+  "main": "index.js",\n\
+  "scripts": {\n\
+	"start": "node index.js",\n\
+	...\n\
+  },\n\
+  ...\n\
+}\n\
+\n\
 $ npm start\n');
 
 		});

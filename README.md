@@ -56,6 +56,9 @@ please create your server before you trying to run the following steps.
 	...
 	entry point: (index.js) index.js
 	...
+	
+
+	$ npm install --save denhub-device
 
 	$ vim package.json
 	{
@@ -68,8 +71,6 @@ please create your server before you trying to run the following steps.
 	  ...
 	}
 
-	
-	$ npm install --save denhub-device
 
 	$ npm start
 
