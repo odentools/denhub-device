@@ -61,23 +61,35 @@ module.exports = {
 	 */
 	getConfig: function (is_ignore_errors, opt_config_filename) {
 
-
-		if (!opt_config_filename) opt_config_filename = __dirname + '/../config.json';
-
-		var config = {}, config_file = null;
-
-		try {
-			config_file = require('fs').readFileSync(opt_config_filename);
-		} catch (e) {
-			if (!is_ignore_errors) {
-				console.log(colors.bold.red('Error: Could not read the configuration file.'));
-				console.log(__dirname + '/../config.json\n');
-				console.log(colors.bold('If you never created it, please try the following command:'));
-				console.log('$ denhub-device-generator --init\n');
-				process.exit(255);
-			}
+		var config_paths = [];
+		if (opt_config_filename) {
+			config_paths.push(opt_config_filename);
+		} else {
+			// root of denhub-device directory
+			config_paths.push(__dirname + '/../config.json');
+			// root of dependence source directory
+			config_paths.push('./config.json');
 		}
 
+		var config_file = null;
+		for (var i = 0, l = config_paths.length; i < l; i++) {
+			try {
+				config_file = require('fs').readFileSync(config_paths[i]);
+			} catch (e) {
+				continue;
+			}
+			if (config_file) break;
+		}
+
+		if (!config_file && !is_ignore_errors) {
+			console.log(colors.bold.red('Error: Could not read the configuration file.'));
+			console.log(config_paths.join('\n'));
+			console.log(colors.bold('If you never created it, please try the following command:'));
+			console.log('$ denhub-device-generator --init\n');
+			process.exit(255);
+		}
+
+		var config = {};
 		if (config_file) {
 			try {
 				config = JSON.parse(config_file);

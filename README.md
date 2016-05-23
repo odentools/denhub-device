@@ -56,7 +56,21 @@ please create your server before you trying to run the following steps.
 	...
 	entry point: (index.js) index.js
 	...
+
+	$ vim package.json
+	{
+	  ...
+	  "main": "index.js",
+	  "scripts": {
+	    "start": "node index.js",
+	    "test": "echo \"Error: no test specified\" && exit 1"
+	  },
+	  ...
+	}
+
+	
 	$ npm install --save denhub-device
+
 	$ npm start
 
 
