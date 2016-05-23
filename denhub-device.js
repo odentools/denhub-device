@@ -63,6 +63,7 @@ DenHubDevice.prototype.start = function (opt_callback) {
 	// Set the fatal exception handler
 	if (!self.isDebugMode) {
 		process.on('uncaughtException', function (err) {
+			self.logError('uncaughtException', err.stack.toString(), true);
 			self.restart();
 		});
 	}
@@ -446,7 +447,7 @@ DenHubDevice.prototype._initPlugins = function (plugin_name, callback) {
 		} catch (e) {
 			return;
 		}
-		
+
 		file_list.forEach(function (plugin_filename, i) {
 			if (plugin_filename.match(/^([a-zA-Z0-9_\-]+)\.js$/)) {
 
