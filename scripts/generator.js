@@ -271,6 +271,11 @@ CommandsHandler.prototype.' + cmd_name + ' = function (args, cb_runner) {\n\
 		handler_js = handler_js.replace(new RegExp('\\%' + config_key + '\\%', 'g'), config[config_key]);
 	}
 
+	// Append the module.exports
+	if (!handler_js.match(/module\.exports = CommandsHandler;/)) {
+		handler_js += '\n\nmodule.exports = CommandsHandler;\n';
+	}
+
 	// Preview of the entry point script
 	console.log(entry_js);
 
