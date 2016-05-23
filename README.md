@@ -5,7 +5,7 @@ It includes the generator for create your daemon.
 
 This project is development phase.
 
-[![Build Status](https://travis-ci.org/odentools/denhub-device?branch=master)](https://travis-ci.org/odentools/denhub-device)
+[![Build Status](https://travis-ci.org/odentools/denhub-device.svg?branch=master)](https://travis-ci.org/odentools/denhub-device)
 
 
 ## Get Started
