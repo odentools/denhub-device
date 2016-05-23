@@ -1,0 +1,25 @@
+/**
+ * Device Commands Handler for %deviceType%
+ */
+
+'use strict';
+
+
+/**
+ * Constructor method
+ * @param {Object} config         Configuration which read from config.json (Read only)
+ * @param {Function} logger       Logger compatible with console object - Usage: logger.log(text)
+ * @param {HandlerHelper} helper  Instance of HandlerHelper
+ */
+var CommandsHandler = function (config, logger, helper) {
+
+	// Device configuration
+	this.config = config;
+
+	// Logger
+	this.logger = logger;
+
+	// Simple Key-Value Store - It can be read, write and sync with server
+	this.kvs = helper.getPlugin('_kvs'); // The _(underscore) prefix means the core plugin.
+
+};

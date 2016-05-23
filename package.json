@@ -1,0 +1,31 @@
+{
+  "name": "denhub-device",
+  "version": "0.1.0",
+  "description": "Device daemon for DenHub platform",
+  "main": "index.js",
+  "scripts": {
+    "pretest": "eslint .",
+    "test": "mocha tests/*.js"
+  },
+  "bin": {
+    "denhub-device-generator": "./scripts/generator.js"
+  },
+  "author": "OdenTools",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/odentools/denhub-device.git"
+  },
+  "dependencies": {
+    "colors": "^1.1.2",
+    "config": "^1.20.3",
+    "inquirer": "^1.0.2",
+    "minimist": "^1.2.0",
+    "node-config": "0.0.2",
+    "ws": "^1.1.0"
+  },
+  "devDependencies": {
+    "eslint": "^2.7.0",
+    "mocha": "^2.4.5"
+  }
+}

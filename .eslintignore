@@ -1,0 +1,8 @@
+# Frontend libraries that installed by Bower.
+bower_components/
+
+# Backend libraries that installed by npm
+node_modules/
+
+# Documents
+README.md
