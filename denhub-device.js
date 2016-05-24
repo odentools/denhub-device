@@ -216,35 +216,7 @@ DenHubDevice.prototype.getWsInstance = function () {
  */
 DenHubDevice.prototype.logDebug = function (tag_text, log_obj, is_dont_send) {
 
-	var self = this;
-
-	var log_text = new String();
-	if (log_obj != null) {
-		var text_class = Object.prototype.toString.call(log_obj).slice(8, -1);
-		if (text_class == 'Object' || text_class == 'Array') { // Map or Array
-			log_text = JSON.stringify(log_obj, null, '\t');
-		} else {
-			log_text = log_obj;
-		}
-	}
-
-	if (!self.isSuppressLog) console.log('[DEBUG] ' + tag_text + ' / ' + log_text);
-
-	if (is_dont_send) return;
-
-	try {
-		self.webSocket.send(JSON.stringify({
-			cmd: '_sendLog',
-			args: {
-				type: 'debug',
-				text: log_text,
-				tag: tag_text
-			},
-			sentAt: new Date().getTime()
-		}));
-	} catch (e) {
-		return;
-	}
+	this._log('debug', tag_text, log_obj, is_dont_send);
 
 };
 
@@ -257,35 +229,7 @@ DenHubDevice.prototype.logDebug = function (tag_text, log_obj, is_dont_send) {
  */
 DenHubDevice.prototype.logInfo = function (tag_text, log_obj, is_dont_send) {
 
-	var self = this;
-
-	var log_text = new String();
-	if (log_obj != null) {
-		var text_class = Object.prototype.toString.call(log_obj).slice(8, -1);
-		if (text_class == 'Object' || text_class == 'Array') { // Map or Array
-			log_text = JSON.stringify(log_obj, null, '\t');
-		} else {
-			log_text = log_obj;
-		}
-	}
-
-	if (!self.isSuppressLog) console.log('[INFO] ' + tag_text + ' / ' + log_text);
-
-	if (is_dont_send) return;
-
-	try {
-		self.webSocket.send(JSON.stringify({
-			cmd: '_sendLog',
-			args: {
-				type: 'info',
-				text: log_text,
-				tag: tag_text
-			},
-			sentAt: new Date().getTime()
-		}));
-	} catch (e) {
-		return;
-	}
+	this._log('info', tag_text, log_obj, is_dont_send);
 
 };
 
@@ -298,35 +242,7 @@ DenHubDevice.prototype.logInfo = function (tag_text, log_obj, is_dont_send) {
  */
 DenHubDevice.prototype.logWarn = function (tag_text, log_obj, is_dont_send) {
 
-	var self = this;
-
-	var log_text = new String();
-	if (log_obj != null) {
-		var text_class = Object.prototype.toString.call(log_obj).slice(8, -1);
-		if (text_class == 'Object' || text_class == 'Array') { // Map or Array
-			log_text = JSON.stringify(log_obj, null, '\t');
-		} else {
-			log_text = log_obj;
-		}
-	}
-
-	console.log('[WARN] ' + tag_text + ' / ' + log_text);
-
-	if (is_dont_send) return;
-
-	try {
-		self.webSocket.send(JSON.stringify({
-			cmd: '_sendLog',
-			args: {
-				type: 'warn',
-				text: log_text,
-				tag: tag_text
-			},
-			sentAt: new Date().getTime()
-		}));
-	} catch (e) {
-		return;
-	}
+	this._log('warn', tag_text, log_obj, is_dont_send);
 
 };
 
@@ -339,35 +255,7 @@ DenHubDevice.prototype.logWarn = function (tag_text, log_obj, is_dont_send) {
  */
 DenHubDevice.prototype.logError = function (tag_text, log_obj, is_dont_send) {
 
-	var self = this;
-
-	var log_text = new String();
-	if (log_obj != null) {
-		var text_class = Object.prototype.toString.call(log_obj).slice(8, -1);
-		if (text_class == 'Object' || text_class == 'Array') { // Map or Array
-			log_text = JSON.stringify(log_obj, null, '\t');
-		} else {
-			log_text = log_obj;
-		}
-	}
-
-	console.log('[ERROR] ' + tag_text + ' / ' + log_text);
-
-	if (is_dont_send) return;
-
-	try {
-		self.webSocket.send(JSON.stringify({
-			cmd: '_sendLog',
-			args: {
-				type: 'error',
-				text: log_text,
-				tag: tag_text
-			},
-			sentAt: new Date().getTime()
-		}));
-	} catch (e) {
-		return;
-	}
+	this._log('error', tag_text, log_obj, is_dont_send);
 
 };
 
@@ -506,6 +394,50 @@ DenHubDevice.prototype._sendManifest = function () {
 
 	// Send to server
 	self.webSocket.send(JSON.stringify(manifest));
+
+};
+
+
+/**
+ * Print the message to the log
+ * @param  {String} type_str    Type string of the item - 'debug', 'info', 'warn', 'error'
+ * @param  {String} tag_str     Tag string of the item
+ * @param  {Object} log_obj     Log object of the item
+ * @param  {Boolean} is_dont_send Whether the log to send to server
+ */
+DenHubDevice.prototype._log = function (type_str, tag_str, log_obj, is_dont_send) {
+
+	var self = this;
+
+	var log_text = new String();
+	if (log_obj != null) {
+		var text_class = Object.prototype.toString.call(log_obj).slice(8, -1);
+		if (text_class == 'Object' || text_class == 'Array') { // Map or Array
+			log_text = JSON.stringify(log_obj, null, '\t');
+		} else if (text_class == 'Error' && log_obj.stack != null) {
+			log_text = log_obj.stack.toString();
+		} else {
+			log_text = log_obj;
+		}
+	}
+
+	console.log('[' + helper.toUpperCase(type_str) + '] ' + tag_str + ' / ' + log_text);
+
+	if (is_dont_send) return;
+
+	try {
+		self.webSocket.send(JSON.stringify({
+			cmd: '_sendLog',
+			args: {
+				type: type_str,
+				text: log_text,
+				tag: tag_str
+			},
+			sentAt: new Date().getTime()
+		}));
+	} catch (e) {
+		return;
+	}
 
 };
 

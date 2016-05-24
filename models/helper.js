@@ -103,6 +103,26 @@ module.exports = {
 
 
 	/**
+	 * Conver the string to upper case
+	 * @return {String} Converted string
+	 */
+	toUpperCase: function (str) {
+
+		var self = this;
+
+		if ('i' !== 'I'.toLowerCase()) {
+			// Thanks for http://qiita.com/niusounds/items/fff91f3f236c31ca910f
+			return str.replace(/[a-z]/g, function(ch) {
+				return String.fromCharCode(ch.charCodeAt(0) & ~32);
+			});
+		}
+
+		return str.toUpperCase();
+
+	},
+
+	
+	/**
 	 * Whether the variable type is matched with the specified variable type
 	 * @param  {Object}  obj      Target variable
 	 * @param  {String}  var_type Expected variable type
