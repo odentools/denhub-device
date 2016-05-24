@@ -28,18 +28,18 @@ please create your server before you trying to run the following steps.
 
 	? The configuration file was generated. Would you write it to config.json ? Yes
 
+	? The commands file was not found. Would you write the example to commands.json ? Yes
+
 	? Would you generate the source code now ? No
 
 
-	$ vim config.json
+	$ vim commands.json
 	{
-		"commands": {
-			"setMotorPower": {
-				"description": "Set the motor power",
-				"args": {
-					"left": "INTEGER(0,255) DEFAULT 0",
-					"right": "INTEGER(0,255) DEFAULT 0"
-				}
+		"setMotorPower": {
+			"description": "Set the motor power",
+			"args": {
+				"left": "INTEGER(0,255) DEFAULT 0",
+				"right": "INTEGER(0,255) DEFAULT 0"
 			}
 		}
 	}
@@ -66,6 +66,25 @@ Run the daemon as production mode:
 	$ npm start
 
 
+## About commands.json
+
+It describes the commands and specification of values, with using [S-Spec](https://github.com/odentools/s-spec) format.
+
+Format:
+```
+{
+	"COMMAND-NAME": {
+		"description": "DESCRIPTION-OF-COMMAND",
+		"args": {
+			"VALUE-NAME": "S-SPEC-FORMAT",
+			...
+		}
+	},
+	...
+}
+```
+
+
 ## About config.json
 
 ### denhubServerHost (Required)
@@ -81,24 +100,6 @@ NOTE: If available, we recommended to use the "wss:" schema for secure connectio
 
 HINT: If you don't have [denhub-server](https://github.com/odentools/denhub-server),
 please try to creating your server. That will be finished right away.
-
-### commands (Required)
-
-It describes the commands and specification of values, with using [S-Spec](https://github.com/odentools/s-spec) format.
-
-Format:
-```
-"commands": {
-	"COMMAND-NAME": {
-		"description": "DESCRIPTION-OF-COMMAND",
-		"args": {
-			"VALUE-NAME": "S-SPEC-FORMAT",
-			...
-		}
-	},
-	...
-}
-```
 
 ### deviceName (Required)
 

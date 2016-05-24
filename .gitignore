@@ -1,4 +1,5 @@
 node_modules/
+commands.json
 config.json
 compiling_error.txt
 index.js

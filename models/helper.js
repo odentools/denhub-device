@@ -57,9 +57,11 @@ module.exports = {
 
 	/**
 	 * Read the configuration file
-	 * @return {Object} Configuration file
+	 * @return {Object} Configuration
 	 */
 	getConfig: function (is_ignore_errors, opt_config_filename) {
+
+		var self = this;
 
 		var config_paths = [];
 		if (opt_config_filename) {
@@ -98,7 +100,54 @@ module.exports = {
 			}
 		}
 
+		config.commands = self.getCommands(is_ignore_errors) || null;
+
 		return config;
+	},
+
+
+	/**
+	 * Read the commands definition file
+	 * @return {Object} Commands definition
+	 */
+	getCommands: function (is_ignore_errors) {
+
+		var file_paths = [];
+
+		// root of denhub-device directory
+		file_paths.push(__dirname + '/../commands.json');
+		// root of dependence source directory
+		file_paths.push('./commands.json');
+
+		var file = null;
+		for (var i = 0, l = file_paths.length; i < l; i++) {
+			try {
+				file = require('fs').readFileSync(file_paths[i]);
+			} catch (e) {
+				continue;
+			}
+			if (file) break;
+		}
+
+		if (!file && !is_ignore_errors) {
+			console.log(colors.bold.red('Error: Could not read the commands file.'));
+			console.log(file_paths.join('\n'));
+			console.log(colors.bold('If you never created it, please try the following command:'));
+			console.log('$ denhub-device-generator --init\n');
+			process.exit(255);
+		}
+
+		var commands = {};
+		if (file) {
+			try {
+				commands = JSON.parse(file);
+			} catch (e) {
+				if (!is_ignore_errors) throw e;
+				commands = null;
+			}
+		}
+
+		return commands;
 	},
 
 
@@ -121,7 +170,7 @@ module.exports = {
 
 	},
 
-	
+
 	/**
 	 * Whether the variable type is matched with the specified variable type
 	 * @param  {Object}  obj      Target variable

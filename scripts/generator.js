@@ -11,7 +11,7 @@ var minimist = require('minimist'), inquirer = require('inquirer'),
 	fs = require('fs'), colors = require('colors');
 var helper = require(__dirname + '/../models/helper');
 
-var CONFIG_FILENAME = 'config.json',
+var CONFIG_FILENAME = 'config.json', COMMANDS_FILENAME = 'commands.json',
 	ENTRY_POINT_FILENAME = 'index.js', HANDLER_FILENAME = 'handler.js';
 
 console.log('>> DenHub-Device Generator <<\n\
@@ -26,8 +26,8 @@ if (argv.init | argv.i) { // Manifest Generator Mode
 	// Read the configuration file
 	config = helper.getConfig(true); // Allow the incomplete configuration file
 
-	// Run the manifest generator
-	generateManifest(config);
+	// Run the configuration generator
+	generateConfig(config);
 
 } else if (argv.help | argv.h) { // Help mode
 
@@ -59,14 +59,14 @@ NOTE: If you not specified any options,\n\
 
 
 /**
- * Generate the manifest file
+ * Generate the configuration file
  * @param  {Object} old_config Current configuration
  */
-function generateManifest (old_config) {
+function generateConfig (old_config) {
 
 	var self = this;
 
-	console.log(colors.bold('--------------- Manifest Generator ---------------\n'));
+	console.log(colors.bold('--------------- Configuration Generator ---------------\n'));
 
 	var questions = [
 		{
@@ -112,6 +112,10 @@ function generateManifest (old_config) {
 
 	];
 
+	// Read the template of commands definition
+	var commands_tmpl = fs.readFileSync(__dirname + '/../templates/' + COMMANDS_FILENAME + '.tmpl').toString();
+
+	// Start the question
 	inquirer.prompt(questions).then(function (answer) {
 
 		// Generate the configuration values
@@ -126,39 +130,77 @@ function generateManifest (old_config) {
 		var formatted_json = JSON.stringify(config,  null, '    ');
 		console.log('\n\n' + formatted_json + '\n');
 
-		// Last confirmation
+		// Confirmation for save the configuration file
 		inquirer.prompt([{
 			type: 'confirm',
-			name: 'lastConfirm',
+			name: 'confirmSaveConfig',
 			message: 'The configuration file was generated. Would you write it to ' + CONFIG_FILENAME + ' ?'
+
 		}]).then(function (answer) {
 
-			if (!answer.lastConfirm) {
-				generateManifest();
-				return;
-			}
+			if (!answer.confirmSaveConfig) return false;
 
 			// Save the configuration file
 			console.log('\nWriting to ' + process.cwd() + '/' + CONFIG_FILENAME);
 			fs.writeFileSync(CONFIG_FILENAME, formatted_json);
 			console.log('Writing has been completed.\n\n');
 
-			// Vonfirmation for continue
-			inquirer.prompt([{
+			return true;
+
+		}).then(function (is_wrote) {
+
+			// Check the commands file
+			var commands_file = null;
+			try {
+				commands_file = JSON.parse(fs.readFileSync(COMMANDS_FILENAME));
+			} catch (e) {
+				commands_file = null;
+			}
+
+			if (commands_file != null) {
+				// Skip
+				return {
+					confirmSaveCommands: false
+				};
+			}
+
+			console.log(commands_tmpl);
+
+			return inquirer.prompt([{
+				type: 'confirm',
+				name: 'confirmSaveCommands',
+				message: 'The commands file was not found. Would you write the example to ' + COMMANDS_FILENAME + ' ?'
+			}]);
+
+		}).then(function (answer) {
+
+			if (!answer.confirmSaveCommands) return false;
+
+			// Save the commands file
+			console.log('\nWriting to ' + process.cwd() + '/' + COMMANDS_FILENAME);
+			fs.writeFileSync(COMMANDS_FILENAME, commands_tmpl);
+			console.log('Writing has been completed.\n\n');
+
+			return true;
+
+		}).then(function (is_wrote) {
+
+			// Confirmation for continue
+			return inquirer.prompt([{
 				type: 'confirm',
 				name: 'continueConfirm',
 				message: 'Would you generate the source code now ?'
-			}]).then(function (answer) {
+			}]);
 
-				if (!answer.continueConfirm) {
-					console.log(colors.bold.green('\nAll was completed :)'));
-					return;
-				}
+		}).then(function (answer) {
 
-				// Generate the source code of the device
-				generateCode(config);
+			if (!answer.continueConfirm) {
+				console.log(colors.bold.green('\nAll was completed :)'));
+				return;
+			}
 
-			});
+			// Generate the source code of the device
+			generateCode(config);
 
 		});
 
@@ -347,14 +389,14 @@ function generateCodeHandlerJs (config) {
 		// Make a handler for this command
 		var cmd = config.commands[cmd_name];
 		var js_func = '\n\n\
-	/**\n\
-	* %cmdDescription%\n\
-	* @param  {Object} args         Arguments of the received command\n\
-	* @param  {Function} cb_runner  Callback runner for response\n\
-	* @return {Boolean} if returns true, handler indicates won\'t use the callback \n\
-	*/\n\
-	CommandsHandler.prototype.' + cmd_name + ' = function (args, cb_runner) {\n\
-	\t\n';
+/**\n\
+* %cmdDescription%\n\
+* @param  {Object} args         Arguments of the received command\n\
+* @param  {Function} cb_runner  Callback runner for response\n\
+* @return {Boolean} if returns true, handler indicates won\'t use the callback \n\
+*/\n\
+CommandsHandler.prototype.' + cmd_name + ' = function (args, cb_runner) {\n\
+\t\n';
 
 		// To align the line length of argument examples
 		var cmd_args = cmd.arguments || cmd.args || [];
@@ -384,9 +426,7 @@ function generateCodeHandlerJs (config) {
 			js_func += '\t\n';
 		}
 
-		js_func += '\tcb_runner.send(null, \'OKAY\');\n\
-	\n\
-	};\n';
+		js_func += '\tcb_runner.send(null, \'OKAY\');\n\t\n\};\n';
 
 		// Replace the command placeholders of the commands handler script
 		js_func = js_func.replace(/\%cmdName\%/g, cmd_name);

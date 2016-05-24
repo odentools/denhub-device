@@ -3,6 +3,7 @@ tests/
 .eslintignore
 .eslintrc
 .gitignore
+commands.json
 config.json
 .travis.yml
 handler.js

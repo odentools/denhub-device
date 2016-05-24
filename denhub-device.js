@@ -441,11 +441,17 @@ DenHubDevice.prototype._sendManifest = function () {
 	manifest.deviceDaemon = helper.getPackageInfo().name + '/' + helper.getPackageInfo().version;
 
 	// Send to server
-	self.webSocket.send(JSON.stringify({
+	var manifest_json = JSON.stringify({
 		cmd: '_sendManifest',
 		args: manifest
-	}));
-	self.logDebug('ws', 'Send a manifest to the server');
+	});
+	self.webSocket.send(manifest_json);
+
+	if (self.isDebugMode) {
+		self.logDebug('ws', 'Send a manifest to the server:\n' + manifest_json);
+	} else {
+		self.logDebug('ws', 'Send a manifest to the server');
+	}
 
 };
 
