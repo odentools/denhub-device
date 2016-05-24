@@ -1,20 +1,13 @@
 {
   "name": "denhub-device",
+  "description": "Device Daemon　& Generator for Denhub platform",
   "version": "0.1.0",
-  "description": "Device daemon for DenHub platform",
-  "main": "denhub-device.js",
-  "scripts": {
-    "pretest": "eslint .",
-    "test": "mocha tests/*.js"
-  },
+  "author": "OdenTools",
   "bin": {
     "denhub-device-generator": "./scripts/generator.js"
   },
-  "author": "OdenTools",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/odentools/denhub-device.git"
+  "bugs": {
+    "url": "https://github.com/odentools/denhub-device/issues"
   },
   "dependencies": {
     "colors": "^1.1.2",
@@ -25,5 +18,23 @@
   "devDependencies": {
     "eslint": "^2.7.0",
     "mocha": "^2.4.5"
+  },
+  "engines": {
+    "node": ">= 5.0.0"
+  },
+  "homepage": "https://github.com/odentools/denhub-device",
+  "keywords": [
+    "denhub",
+    "iot"
+  ],
+  "license": "MIT",
+  "main": "denhub-device.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/odentools/denhub-device.git"
+  },
+  "scripts": {
+    "pretest": "eslint .",
+    "test": "mocha tests/*.js"
   }
 }
