@@ -153,6 +153,9 @@ DenHubDevice.prototype.restart = function () {
 
 	var self = this;
 
+	if (self.isRestarting) return;
+	self.isRestarting = true;
+
 	self.logInfo('restart', 'The daemon will be restart soon...\n\
 If you need cancel the restarting, try the command: $ kill -9 ' + process.pid, true);
 
