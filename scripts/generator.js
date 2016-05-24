@@ -180,9 +180,8 @@ function generateCode (config) {
 		throw new Error('commands undefined in your config.js');
 	}
 
-	var entry_js = null, handler_js = null;
-
 	// Start the processes
+	var entry_js = null, handler_js = null, package_json = null;
 	Promise.resolve()
 	.then(function () {
 
@@ -239,42 +238,55 @@ function generateCode (config) {
 		console.log('\nWriting to ' + process.cwd() + '/' + HANDLER_FILENAME);
 		fs.writeFileSync(HANDLER_FILENAME, handler_js);
 		console.log('Writing has been completed.\n\n');
+
+		return true;
+
+	}).then(function (result) {
+
+		// Generate the package.json
+		package_json = generatePackageJson(config);
+		if (package_json == null) { // If user's package.json exists and invalid
+			// Skip
+			return { answer: { confirmSavePackageJson: false} };
+		}
+
+		// Preview of the package.json
+		console.log(package_json + '\n');
+
+		// Confirm to user
+		return inquirer.prompt([{
+			type: 'confirm',
+			name: 'confirmSavePackageJson',
+			message: 'The package.json was generated. Would you write it to package.json ?'
+		}]);
+
+	}).then(function (answer) {
+
+		if (!answer.confirmSavePackageJson) {
+			package_json = null;
+			return false;
+		}
+
+		// Save the commands handler script
+		console.log('\nWriting to ' + process.cwd() + '/package.json');
+		fs.writeFileSync('package.json', package_json);
+		console.log('Writing has been completed.\n\n');
 		return true;
 
 	}).then(function () {
 
-		console.log(colors.bold.green('\nAll was completed :)\n'));
+		console.log(colors.bold.green('\nAll was completed.'));
 
 		if (!entry_js && !handler_js) {
+			console.log('');
 			process.exit(0);
 			return;
 		}
 
 		// Show the guide
-		console.log(colors.bold.blue('Finally, please execute the following commands by yourself.'));
-		console.log('For details, please refer to https://github.com/odentools/denhub-device/');
-		console.log('\n\
-$ npm init\n\
-...\n\
-entry point: (index.js) index.js\n\
-...\n\
-\n\
-\n\
-$ npm install --save denhub-device\n\
-\n\
-\n\
-$ vim package.json\n\
-{\n\
-...\n\
-"scripts": {\n\
-"start": "node index.js",\n\
-...\n\
-},\n\
-...\n\
-}\n\
-\n\
-\n\
-$ npm start -- --development\n');
+		console.log(colors.bold('Enjoy :)'));
+		console.log('\n$ npm start -- --development\n');
+		console.log('For details, please refer to https://github.com/odentools/denhub-device/\n');
 
 	});
 
@@ -397,5 +409,71 @@ function generateCodeHandlerJs (config) {
 	}
 
 	return handler_js;
+
+}
+
+
+/**
+ * Generate the package.json
+ * @param  {Object} config Device configuration
+ * @return {String}        JSON code
+ */
+function generatePackageJson (config) {
+
+	// Read the user's package.json
+	var user_file;
+	try {
+		// Read from current file
+		user_file = fs.readFileSync('./package.json').toString();
+	} catch (e) {
+		user_file = null;
+	}
+
+	// Parse the user's package.json
+	var user_json = null;
+	if (user_file) {
+		try {
+			user_json = JSON.parse(user_file);
+		} catch (e) {
+			console.log(colors.bold.red('Your package.json was invalid!\n\
+	We skipped the merging of your package.json with template.'));
+			console.log(user_json);
+			return null;
+		}
+	} else {
+		user_json = {};
+	}
+
+	// Read the template package.json
+	var tmpl_file = fs.readFileSync(__dirname + '/../templates/package.json.tmpl').toString();
+
+	// Replace the placeholders (e.g. %deviceType%) of whole of template
+	for (var config_key in config) {
+		tmpl_file = tmpl_file.replace(new RegExp('\\%' + config_key + '\\%', 'g'), config[config_key]);
+	}
+	tmpl_file = tmpl_file.replace(new RegExp('\\%libVersion\\%', 'g'), helper.getPackageInfo().version);
+
+	// Parse the template package.json
+	var tmpl_json = null;
+	try {
+		tmpl_json = JSON.parse(tmpl_file);
+	} catch (e) {
+		console.error('Could not parse the template file:\n' + tmpl_file + '\n' + e.stack.toString());
+		process.exit(0);
+	}
+
+	// Merge the fields with template package.json
+	for (var key in tmpl_json) {
+		if (user_json[key] == null) {
+			user_json[key] = tmpl_json[key];
+		} else if (helper.isType(user_json[key], 'Object')) {
+			for (var key_ in tmpl_json[key]) {
+				if (user_json[key][key_] == null) user_json[key][key_] = tmpl_json[key][key_];
+			}
+		}
+	}
+
+	// Done
+	return JSON.stringify(user_json,  null, '  ');
 
 }

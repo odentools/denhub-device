@@ -51,24 +51,7 @@ please create your server before you trying to run the following steps.
 
 	? The commands handler was generated. Would you write it to handler.js ? Yes
 
-
-	$ npm init
-	...
-	entry point: (index.js) index.js
-	...
-
-
-	$ npm install --save denhub-device
-
-	$ vim package.json
-	{
-	  ...
-	  "scripts": {
-	    "start": "node index.js"
-		...
-	  },
-	  ...
-	}
+	? The package.json was generated. Would you write it to package.json ? Yes
 
 
 Run the daemon as development mode:
