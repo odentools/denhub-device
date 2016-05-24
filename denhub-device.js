@@ -52,7 +52,10 @@ var DenHubDevice = function (CommandsHandlerModel, opt_config) {
 	}
 
 	// Interval time (millisec) for reconnecting to server
-	this.RECONNECT_DELAY_TIME_MSEC = 3000;
+	this.config.reconnectDelayTimeMsec = this.config.reconnectDelayTimeMsec || 5000;
+
+	// Interval time (millisec) for restarting when the fatal error occurred
+	this.config.restartDelayTime = this.config.restartDelayTime || 6000;
 
 };
 
@@ -81,7 +84,7 @@ DenHubDevice.prototype.start = function (opt_callback) {
 		if (opt_callback) opt_callback(e, null);
 		if (self.isDebugMode) throw e;
 		self.logWarn('ws', 'Could not connect to server; Reconnecting...');
-		setTimeout(self.start, self.RECONNECT_DELAY_TIME_MSEC);
+		setTimeout(self.start, self.config.reconnectDelayTimeMsec);
 	}
 
 	// Set the event listener - Connection Opened
@@ -104,7 +107,7 @@ DenHubDevice.prototype.start = function (opt_callback) {
 
 		// Re-connect
 		self.logWarn('ws', 'Disconnected from server; Reconnecting...');
-		setTimeout(self.start, self.RECONNECT_DELAY_TIME_MSEC);
+		setTimeout(self.start, self.config.reconnectDelayTimeMsec);
 
 	});
 
@@ -146,28 +149,37 @@ DenHubDevice.prototype.restart = function () {
 
 	var self = this;
 
-	// Get the command and parameters of myself
-	var argv = process.argv.concat(); // Copy the arguments array
-	var cmd = argv.shift();
+	self.logInfo('restart', 'The daemon will be restart soon...\n\
+If you need cancel the restarting, try the command: $ kill -9 ' + process.pid, true);
 
-	// Start the new app
-	console.log('Restarting myself...');
-	var child = null;
-	try {
-		child = require('child_process').spawn(cmd, argv, {
-			detached: true,
-			stdio: [ 'ignore', 'ignore', 'ignore' ]
-		});
-		child.unref();
-	} catch (e) {
-		console.log('Could not restart myself - ' + e.toString());
-		return;
-	}
+	var timer = setTimeout(function () {
 
-	// Exit myself
-	var timer = setTimeout(function() {
-		process.exit(0);
-	}, 500);
+		// Get the command and parameters of myself
+		var argv = process.argv.concat(); // Copy the arguments array
+		var cmd = argv.shift();
+
+		// Start the new app
+		console.log('Restarting...');
+		var child = null;
+		try {
+			child = require('child_process').spawn(cmd, argv, {
+				cwd: process.cwd,
+				detached: true,
+				env: process.env,
+				stdio: [process.stdin, process.stdout, process.stderr]
+			});
+			child.unref();
+		} catch (e) {
+			console.log('Could not restart myself - ' + e.toString());
+			return;
+		}
+
+		// Exit myself
+		var timer_ = setTimeout(function() {
+			process.exit(0);
+		}, 500);
+
+	}, self.config.restartDelayTime);
 
 };
 
