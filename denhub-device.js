@@ -6,7 +6,7 @@
 
 'use strict';
 
-var WebSocket = require('ws'), colors = require('colors');
+var WebSocket = require('ws'), colors = require('colors'), url = require('url');
 
 var HandlerHelper = require(__dirname + '/models/handler-helper'),
 	HandlerCallbackRunner = require(__dirname + '/models/handler-callback-runner'),
@@ -52,7 +52,7 @@ var DenHubDevice = function (CommandsHandlerModel, opt_config) {
 	}
 
 	// Interval time (millisec) for reconnecting to server
-	this.config.reconnectDelayTimeMsec = this.config.reconnectDelayTimeMsec || 5000;
+	this.config.reconnectDelayTime = this.config.reconnectDelayTime || 5000;
 
 	// Interval time (millisec) for restarting when the fatal error occurred
 	this.config.restartDelayTime = this.config.restartDelayTime || 6000;
@@ -71,24 +71,48 @@ DenHubDevice.prototype.start = function (opt_callback) {
 	// Set the fatal exception handler
 	if (!self.isDebugMode) {
 		process.on('uncaughtException', function (err) {
-			self.logError('uncaughtException', err.stack.toString(), true);
-			self.restart();
+			try {
+				self.logError('uncaughtException', err, true);
+				self.restart();
+			} catch (e) {
+				console.log('Automatic restart is unavailable.', self, e.toString());
+			}
 		});
 	}
 
+	// Make a websocket url
+	if (self.config.denhubServerHost.match(/ws:\/\/[a-zA-Z0-9_\-]+\.herokuapp\.com/)) {
+		self.config.denhubServerHost = self.config.denhubServerHost.replace(/^ws:\/\//, 'wss://');
+		self.logWarn('start', 'Your denhubServerHost was automatically upgraded to \'wss:\' schema for security reason: '
+			+ self.config.denhubServerHost);
+	}
+	var ws_url = url.format({
+		query: {
+			deviceName: self.config.deviceName,
+			deviceType: self.config.deviceType,
+			deviceToken: self.config.deviceToken
+		}
+	});
+	ws_url = self.config.denhubServerHost + ws_url;
+
 	// Connect to the WebSocket Server
-	var url = self.config.denhubServerHost + '?deviceName=' + self.config.deviceName  + '&deviceType=' + self.config.deviceType
-		+ '&deviceToken=' + self.config.deviceToken;
-	if (url.match(/ws:/)) {
-		self.logWarn('start', 'ws:// schema is not secure. We recommended to use the secure connection.');
+	if (self.config.isDebugMode) {
+		self.logInfo('start', 'Connecting to server... ' + ws_url);
+	} else {
+		self.logInfo('start', 'Connecting to server...');
+	}
+	if (!ws_url.match(/(localhost|172\.0\.0\.1)/) && ws_url.match(/ws:/)) {
+		self.logWarn('start', '\'ws:\' schema is NOT SECURE! We recommended to use the secure connection.');
 	}
 	try {
-		self.webSocket = new WebSocket(url);
+		self.webSocket = new WebSocket(ws_url);
 	} catch (e) {
 		if (opt_callback) opt_callback(e, null);
 		if (self.isDebugMode) throw e;
 		self.logWarn('ws', 'Could not connect to server; Reconnecting...');
-		setTimeout(self.start, self.config.reconnectDelayTimeMsec);
+		setTimeout(function () {
+			self.start();
+		}, self.config.reconnectDelayTime);
 	}
 
 	// Set the event listener - Connection Opened
@@ -113,7 +137,9 @@ DenHubDevice.prototype.start = function (opt_callback) {
 
 		// Re-connect
 		self.logWarn('ws', 'Disconnected from server; Reconnecting...');
-		setTimeout(self.start, self.config.reconnectDelayTimeMsec);
+		setTimeout(function () {
+			self.start();
+		}, self.config.reconnectDelayTime);
 
 	});
 
@@ -291,9 +317,7 @@ DenHubDevice.prototype._onCmdMessage = function (data) {
 
 	// Get the command parameters
 	var cmd_name = data.cmd;
-
 	var cmd_exec_id = data.cmdExecId || -1;
-
 	var cmd_args = data.args || {};
 
 	self.logDebug('_onCmdMessage', 'Received command: ' + cmd_name);

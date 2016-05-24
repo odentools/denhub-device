@@ -285,7 +285,8 @@ function generateCode (config) {
 
 		// Show the guide
 		console.log(colors.bold('Enjoy :)'));
-		console.log('\n$ npm start -- --development\n');
+		console.log('\n$ npm install');
+		console.log('$ npm start -- --development\n');
 		console.log('For details, please refer to https://github.com/odentools/denhub-device/\n');
 
 	});

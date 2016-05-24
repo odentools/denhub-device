@@ -54,6 +54,9 @@ please create your server before you trying to run the following steps.
 	? The package.json was generated. Would you write it to package.json ? Yes
 
 
+	$ npm install
+
+
 Run the daemon as development mode:
 
 	$ npm start -- --development
@@ -74,7 +77,9 @@ Example:
 "denhubServerHost": "wss://my-denhub.herokuapp.com/"
 ```
 
-If you don't have [denhub-server](https://github.com/odentools/denhub-server),
+NOTE: If available, we recommended to use the "wss:" schema for secure connection.
+
+HINT: If you don't have [denhub-server](https://github.com/odentools/denhub-server),
 please try to creating your server. That will be finished right away.
 
 ### commands (Required)
@@ -94,8 +99,6 @@ Format:
 	...
 }
 ```
-
-TODO in Future: Command Editing with CLI
 
 ### deviceName (Required)
 
