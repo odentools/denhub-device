@@ -1,7 +1,7 @@
 {
   "name": "denhub-device",
   "description": "Device Daemon　& Generator for Denhub platform",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": "OdenTools",
   "bin": {
     "denhub-device-generator": "./scripts/generator.js"
