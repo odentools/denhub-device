@@ -121,7 +121,7 @@ Your device name.
 Example:
 
 ```
-"deviceName": "rccar-0"
+"deviceName": "signage-entrance"
 ```
 
 ### deviceType (Required)
@@ -129,7 +129,7 @@ Example:
 Example:
 
 ```
-"deviceName": "rccar-0"
+"deviceType": "signage"
 ```
 
 ### deviceToken
@@ -140,7 +140,7 @@ Or, you can also be left empty this field.
 Example:
 
 ```
-"deviceName": "rccar-0"
+"deviceToken": null
 ```
 
 HINT: If this field is empty,
@@ -148,7 +148,7 @@ your server will be confirmed to whether to approve the device to you,
 when the device has connected first time.
 See details: [On-demand Approval Registration](https://github.com/odentools/denhub-server/wiki/Operation-Add-Devices) on denhub-server wiki.
 
-## More Details
+## See Details
 
 https://github.com/odentools/denhub-device/wiki
 
