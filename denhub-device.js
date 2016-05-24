@@ -6,7 +6,7 @@
 
 'use strict';
 
-var WebSocket = require('ws');
+var WebSocket = require('ws'), colors = require('colors');
 
 var HandlerHelper = require(__dirname + '/models/handler-helper'),
 	HandlerCallbackRunner = require(__dirname + '/models/handler-callback-runner'),
@@ -77,7 +77,11 @@ DenHubDevice.prototype.start = function (opt_callback) {
 	}
 
 	// Connect to the WebSocket Server
-	var url = self.config.denhubServerHost + '?name=' + self.config.deviceName + '&token=' + self.config.deviceToken;
+	var url = self.config.denhubServerHost + '?deviceName=' + self.config.deviceName  + '&deviceType=' + self.config.deviceType
+		+ '&deviceToken=' + self.config.deviceToken;
+	if (url.match(/ws:/)) {
+		self.logWarn('start', 'ws:// schema is not secure. We recommended to use the secure connection.');
+	}
 	try {
 		self.webSocket = new WebSocket(url);
 	} catch (e) {
@@ -433,7 +437,15 @@ DenHubDevice.prototype._log = function (type_str, tag_str, log_obj, is_dont_send
 		}
 	}
 
-	console.log('[' + helper.toUpperCase(type_str) + '] ' + tag_str + ' / ' + log_text);
+	if (type_str == 'info') {
+		console.log(colors.blue('[' + helper.toUpperCase(type_str) + '] ') + tag_str + ' / ' + log_text);
+	} else if (type_str == 'warn') {
+		console.log(colors.yellow('[' + helper.toUpperCase(type_str) + '] ') + tag_str + ' / ' + log_text);
+	} else if (type_str == 'error') {
+		console.log(colors.red('[' + helper.toUpperCase(type_str) + '] ') + tag_str + ' / ' + log_text);
+	} else {
+		console.log(colors.gray('[' + helper.toUpperCase(type_str) + '] ' + tag_str + ' / ' + log_text));
+	}
 
 	if (is_dont_send) return;
 
