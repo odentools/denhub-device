@@ -180,6 +180,114 @@ function generateCode (config) {
 		throw new Error('commands undefined in your config.js');
 	}
 
+	var entry_js = null, handler_js = null;
+
+	// Start the processes
+	Promise.resolve()
+	.then(function () {
+
+		// Generate the entry point script
+		entry_js = generateCodeEntryJs(config);
+
+		// Preview of the entry point script
+		console.log(entry_js);
+
+		// Confirm to user
+		return inquirer.prompt([{
+			type: 'confirm',
+			name: 'confirmSaveEntryJs',
+			message: 'The entry point was generated. Would you write it to ' + ENTRY_POINT_FILENAME + ' ?'
+		}]);
+
+	}).then(function (answer) {
+
+		if (!answer.confirmSaveEntryJs) {
+			entry_js = null;
+			return false;
+		}
+
+		// Save the entry point script
+		console.log('\nWriting to ' + process.cwd() + '/' + ENTRY_POINT_FILENAME);
+		fs.writeFileSync(ENTRY_POINT_FILENAME, entry_js);
+		console.log('Writing has been completed.\n\n');
+
+		return true;
+
+	}).then(function (result) {
+
+		// Generate the commands handler script
+		handler_js = generateCodeHandlerJs(config);
+
+		// Preview of the commands handler script
+		console.log(handler_js);
+
+		// Confirm to user
+		return inquirer.prompt([{
+			type: 'confirm',
+			name: 'confirmSaveHandlerJs',
+			message: 'The commands handler was generated. Would you write it to ' + HANDLER_FILENAME + ' ?'
+		}]);
+
+	}).then(function (answer) {
+
+		if (!answer.confirmSaveHandlerJs) {
+			handler_js = null;
+			return false;
+		}
+
+		// Save the commands handler script
+		console.log('\nWriting to ' + process.cwd() + '/' + HANDLER_FILENAME);
+		fs.writeFileSync(HANDLER_FILENAME, handler_js);
+		console.log('Writing has been completed.\n\n');
+		return true;
+
+	}).then(function () {
+
+		console.log(colors.bold.green('\nAll was completed :)\n'));
+
+		if (!entry_js && !handler_js) {
+			process.exit(0);
+			return;
+		}
+
+		// Show the guide
+		console.log(colors.bold.blue('Finally, please execute the following commands by yourself.'));
+		console.log('For details, please refer to https://github.com/odentools/denhub-device/');
+		console.log('\n\
+$ npm init\n\
+...\n\
+entry point: (index.js) index.js\n\
+...\n\
+\n\
+\n\
+$ npm install --save denhub-device\n\
+\n\
+\n\
+$ vim package.json\n\
+{\n\
+...\n\
+"scripts": {\n\
+"start": "node index.js",\n\
+...\n\
+},\n\
+...\n\
+}\n\
+\n\
+\n\
+$ npm start -- --development\n');
+
+	});
+
+}
+
+
+/**
+ * Generate the source code for entory point
+ * @param  {Object} config Device configuration
+ * @return {String}        Source code
+ */
+function generateCodeEntryJs (config) {
+
 	// Read the entry point script
 	var entry_js = null;
 	try {
@@ -189,6 +297,18 @@ function generateCode (config) {
 		// Read from template script
 		entry_js = fs.readFileSync(__dirname + '/../templates/' + ENTRY_POINT_FILENAME + '.tmpl').toString() + '\n';
 	}
+
+	return entry_js;
+
+}
+
+
+/**
+ * Generate the source code for commands handler
+ * @param  {Object} config Device configuration
+ * @return {String}        Source code
+ */
+function generateCodeHandlerJs (config) {
 
 	// Read the handler script
 	var handler_js = null;
@@ -214,14 +334,14 @@ function generateCode (config) {
 		// Make a handler for this command
 		var cmd = config.commands[cmd_name];
 		var js_func = '\n\n\
-/**\n\
-* %cmdDescription%\n\
-* @param  {Object} args         Arguments of the received command\n\
-* @param  {Function} cb_runner  Callback runner for response\n\
-* @return {Boolean} if returns true, handler indicates won\'t use the callback \n\
-*/\n\
-CommandsHandler.prototype.' + cmd_name + ' = function (args, cb_runner) {\n\
-\t\n';
+	/**\n\
+	* %cmdDescription%\n\
+	* @param  {Object} args         Arguments of the received command\n\
+	* @param  {Function} cb_runner  Callback runner for response\n\
+	* @return {Boolean} if returns true, handler indicates won\'t use the callback \n\
+	*/\n\
+	CommandsHandler.prototype.' + cmd_name + ' = function (args, cb_runner) {\n\
+	\t\n';
 
 		// To align the line length of argument examples
 		var cmd_args = cmd.arguments || cmd.args || [];
@@ -252,8 +372,8 @@ CommandsHandler.prototype.' + cmd_name + ' = function (args, cb_runner) {\n\
 		}
 
 		js_func += '\tcb_runner.send(null, \'OKAY\');\n\
-\n\
-};\n';
+	\n\
+	};\n';
 
 		// Replace the command placeholders of the commands handler script
 		js_func = js_func.replace(/\%cmdName\%/g, cmd_name);
@@ -276,72 +396,6 @@ CommandsHandler.prototype.' + cmd_name + ' = function (args, cb_runner) {\n\
 		handler_js += '\n\nmodule.exports = CommandsHandler;\n';
 	}
 
-	// Preview of the entry point script
-	console.log(entry_js);
-
-	// Confirm to user
-	inquirer.prompt([{
-		type: 'confirm',
-		name: 'confirmSaveEntryJs',
-		message: 'The entry point was generated. Would you write it to ' + ENTRY_POINT_FILENAME + ' ?'
-	}]).then(function (answer) {
-
-		if (answer.confirmSaveEntryJs) {
-			// Save the entry point script
-			console.log('\nWriting to ' + process.cwd() + '/' + ENTRY_POINT_FILENAME);
-			fs.writeFileSync(ENTRY_POINT_FILENAME, entry_js);
-			console.log('Writing has been completed.\n');
-		}
-
-		// Preview of the commands handler script
-		console.log(handler_js);
-
-		// Confirm to user
-		inquirer.prompt([{
-			type: 'confirm',
-			name: 'confirmSaveHandlerJs',
-			message: 'The commands handler was generated. Would you write it to ' + HANDLER_FILENAME + ' ?'
-		}]).then(function (answer) {
-
-			if (!answer.confirmSaveHandlerJs) {
-				console.log(colors.bold.green('\nAll was completed :)'));
-			}
-
-			// Save the commands handler script
-			console.log('\nWriting to ' + process.cwd() + '/' + HANDLER_FILENAME);
-			fs.writeFileSync(HANDLER_FILENAME, handler_js);
-			console.log('Writing has been completed.\n');
-
-			// Done
-			console.log(colors.bold.green('\nAll was completed :)\n'));
-			console.log('--------------------------------------------------\n');
-			console.log(colors.bold.blue('Finally, please execute the following commands by yourself.'));
-			console.log('For details, please refer to https://github.com/odentools/denhub-device/');
-			console.log('\n\
-$ npm init\n\
-...\n\
-entry point: (index.js) index.js\n\
-...\n\
-\n\
-\n\
-$ npm install --save denhub-device\n\
-\n\
-\n\
-$ vim package.json\n\
-{\n\
-  ...\n\
-  "scripts": {\n\
-	"start": "node index.js",\n\
-	...\n\
-  },\n\
-  ...\n\
-}\n\
-\n\
-\n\
-$ npm start -- --development\n');
-
-		});
-
-	});
+	return handler_js;
 
 }
