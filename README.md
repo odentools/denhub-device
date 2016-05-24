@@ -3,17 +3,17 @@
 The Device Daemon Kit for [Denhub](https://github.com/odentools/denhub) platform.
 It includes the generator for create your daemon.
 
-This project is development phase.
+This project is alpha testing phase.
 
 [![Build Status](https://travis-ci.org/odentools/denhub-device.svg?branch=master)](https://travis-ci.org/odentools/denhub-device)
-
+[![npm](https://img.shields.io/npm/v/denhub-device.svg?maxAge=2592000)](https://www.npmjs.com/package/denhub-device)
 
 ## Get Started
 
 NOTE: If you don't have [denhub-server](https://github.com/odentools/denhub-server),
 please create your server before you trying to run the following steps.
 
-	$ npm install -g denhub-device
+	$ sudo npm install -g denhub-device
 
 
 	$ mkdir ~/car-0
