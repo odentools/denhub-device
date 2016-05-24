@@ -1,0 +1,11 @@
+node_modules/
+tests/
+.eslintignore
+.eslintrc
+.gitignore
+config.json
+.travis.yml
+handler.js
+index.js
+compiling_error.txt
+npm-debug.log
