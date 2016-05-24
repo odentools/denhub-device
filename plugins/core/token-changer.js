@@ -1,6 +1,6 @@
 /**
  * TokenChanger Plugin for denhub-device
- * This plugin works as hook of the onSendManifest event
+ * This plugin works as hook of the onCmdReceive event
  * https://github.com/odentools/denhub-device
  * (C) 2016 - OdenTools; Released under MIT License.
  */
@@ -37,7 +37,7 @@ TokenChanger.prototype.onCmdReceive = function (cmd_name, cmd_args, cmd_exec_id)
 	var new_token = cmd_args.deviceToken;
 	if (new_token == null || new_token.length == 0) return;
 
-	this.device.logInfo('TokenChanger', 'Received new token: ' + new_token);
+	self.device.logInfo('TokenChanger', 'Received new token: ' + new_token);
 
 	// Save the new token to config.json
 	var config_file = require('fs').readFileSync('config.json');
@@ -46,7 +46,7 @@ TokenChanger.prototype.onCmdReceive = function (cmd_name, cmd_args, cmd_exec_id)
 	fs.writeFileSync('config.json', JSON.stringify(json, null, '  '));
 
 	// Restart the daemon
-	this.device.restart();
+	self.device.restart();
 
 };
 
