@@ -96,10 +96,12 @@ DenHubDevice.prototype.start = function (opt_callback) {
 
 		self.logDebug('ws', 'Connected to ' + self.config.denhubServerHost + ' :)');
 
-		if (opt_callback) opt_callback(null, self.webSocket);
-
 		// Send the manifest
-		self._sendManifest();
+		setTimeout(function () {
+			self._sendManifest();
+		}, 100);
+
+		if (opt_callback) opt_callback(null, self.webSocket);
 
 	});
 
@@ -289,20 +291,23 @@ DenHubDevice.prototype._onCmdMessage = function (data) {
 
 	// Get the command parameters
 	var cmd_name = data.cmd;
-	if (cmd_name.match(/^\_/)) return;
 
 	var cmd_exec_id = data.cmdExecId || -1;
 
 	var cmd_args = data.args || {};
+
+	self.logDebug('_onCmdMessage', 'Received command: ' + cmd_name);
 
 	// Call a hook of the plugins
 	for (var plugin_name in self.pluginInstances) {
 		try {
 			self.pluginInstances[plugin_name].onCmdReceive(cmd_name, cmd_args, cmd_exec_id);
 		} catch (e) {
-			self.logDebug('_onCmdMessage', 'Could not call onCmdReceive hook of the plugin: ' + plugin_name);
+			self.logWarn('_onCmdMessage', 'Could not call onCmdReceive hook of the plugin: ' + plugin_name);
 		}
 	}
+
+	if (cmd_name.match(/^\_/)) return;
 
 	// Make a callback runner
 	var callback_runner = new HandlerCallbackRunner(self, cmd_name, cmd_exec_id);
@@ -412,7 +417,11 @@ DenHubDevice.prototype._sendManifest = function () {
 	manifest.deviceDaemon = helper.getPackageInfo().name + '/' + helper.getPackageInfo().version;
 
 	// Send to server
-	self.webSocket.send(JSON.stringify(manifest));
+	self.webSocket.send(JSON.stringify({
+		cmd: '_sendManifest',
+		args: manifest
+	}));
+	self.logDebug('ws', 'Send a manifest to the server');
 
 };
 
