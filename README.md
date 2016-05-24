@@ -66,9 +66,13 @@ Run the daemon as production mode:
 	$ npm start
 
 
-## About commands.json
+## Principal Files
 
-It describes the commands and specification of values, with using [S-Spec](https://github.com/odentools/s-spec) format.
+### commands.json
+
+It describes the commands for your device.
+
+It also define a specification of the each values with using [S-Spec](https://github.com/odentools/s-spec) format for validation.
 
 Format:
 ```
@@ -84,60 +88,26 @@ Format:
 }
 ```
 
+### handler.js
 
-## About config.json
+It describes an event handler for the each commands.
 
-### denhubServerHost (Required)
+You can generate the scaffold for handler.js from commands.json using ``denhub-device-generator`` command.
 
-An url of your [denhub-server](https://github.com/odentools/denhub-server).
+### config.json
 
-Example:
-```
-"denhubServerHost": "wss://my-denhub.herokuapp.com/"
-```
+It describes the configurations for your device.
+Also, your command handler can be read those configurations.
 
-NOTE: If available, we recommended to use the "wss:" schema for secure connection.
+https://github.com/odentools/denhub-device/wiki/Operation-config.json
 
-HINT: If you don't have [denhub-server](https://github.com/odentools/denhub-server),
-please try to creating your server. That will be finished right away.
 
-### deviceName (Required)
+## About Command Module
+In denhub-device, your commands definition and command handler can be put together to a new package and publish it.
+Please refer to the [wiki page](https://github.com/odentools/denhub-device/wiki/Dev-CommandModule) for details.
 
-Your device name.
-
-Example:
-
-```
-"deviceName": "signage-entrance"
-```
-
-### deviceType (Required)
-
-Example:
-
-```
-"deviceType": "signage"
-```
-
-### deviceToken
-
-The device token that generated on your denhub-server.
-Or, you can also be left empty this field.
-
-Example:
-
-```
-"deviceToken": null
-```
-
-HINT: If this field is empty,
-your server will be confirmed to whether to approve the device to you,
-when the device has connected first time.
-See details: [On-demand Approval Registration](https://github.com/odentools/denhub-server/wiki/Operation-Add-Devices) on denhub-server wiki.
-
-## See Details
-
-https://github.com/odentools/denhub-device/wiki
+Also you can find the command module on npm:
+https://www.npmjs.com/browse/keyword/denhub-device
 
 
 ## Licenses

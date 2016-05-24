@@ -100,17 +100,31 @@ module.exports = {
 			}
 		}
 
-		config.commands = self.getCommands(is_ignore_errors) || null;
+		config.commands = self._getLocalCommands(is_ignore_errors) || null;
 
 		return config;
+
 	},
 
 
 	/**
-	 * Read the commands definition file
+	 * Read the commands definition of the Command Module
 	 * @return {Object} Commands definition
 	 */
-	getCommands: function (is_ignore_errors) {
+	getCommandsByCommandModulePath: function (dir_path) {
+
+		var file = require('fs').readFileSync(dir_path + '/commands.json');
+
+		return JSON.parse(file);
+
+	},
+
+
+	/**
+	 * Read the user's commands definition
+	 * @return {Object} Commands definition
+	 */
+	_getLocalCommands: function (is_ignore_errors) {
 
 		var file_paths = [];
 
@@ -148,6 +162,7 @@ module.exports = {
 		}
 
 		return commands;
+
 	},
 
 

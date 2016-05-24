@@ -6,7 +6,8 @@
 
 'use strict';
 
-var WebSocket = require('ws'), colors = require('colors'), url = require('url');
+var WebSocket = require('ws'), colors = require('colors'),
+	url = require('url'), util = require('util');
 
 var HandlerHelper = require(__dirname + '/models/handler-helper'),
 	HandlerCallbackRunner = require(__dirname + '/models/handler-callback-runner'),
@@ -21,12 +22,19 @@ var HandlerHelper = require(__dirname + '/models/handler-helper'),
  */
 var DenHubDevice = function (CommandsHandlerModel, opt_config) {
 
+	// Configuration
 	this.config = opt_config || helper.getConfig(false);
+
+	// WebSocket Connection
 	this.webSocket = null;
 
 	// Instances of the plugins
 	this.pluginInstances = {};
 	this._initPlugins();
+
+	// Instances of the command modules
+	this.commandModules = {};
+	this._initCommandModules();
 
 	// Make an instance of the CommandsHandler
 	var ch_logger = new HandlerLogger(this);
@@ -40,7 +48,6 @@ var DenHubDevice = function (CommandsHandlerModel, opt_config) {
 
 	// Check the options
 	this.isDebugMode = this.config.isDebugMode || false;
-	this.isSuppressLog = this.config.isSuppressLog || false;
 
 	// Check the configuration
 	if (this.config.denhubServerHost == null){
@@ -320,7 +327,7 @@ DenHubDevice.prototype._onCmdMessage = function (data) {
 	var cmd_exec_id = data.cmdExecId || -1;
 	var cmd_args = data.args || {};
 
-	self.logDebug('_onCmdMessage', 'Received command: ' + cmd_name);
+	self.logInfo('_onCmdMessage', 'Received command: ' + cmd_name);
 
 	// Call a hook of the plugins
 	for (var plugin_name in self.pluginInstances) {
@@ -336,16 +343,70 @@ DenHubDevice.prototype._onCmdMessage = function (data) {
 	// Make a callback runner
 	var callback_runner = new HandlerCallbackRunner(self, cmd_name, cmd_exec_id);
 
+	// Find the handler method from an instance of the the user's commands handler
+	var is_executed_handler = false, is_wont_response = false, executed_module_name = 'LOCAL';
+	var exec_result = self._execCmdOnCommandHandler(cmd_name, cmd_args, callback_runner, self.commandsHandler, self.config.commands);
+	if (exec_result.isWontResponse) is_wont_response = true;
+	if (exec_result.isExecuted) is_executed_handler = true;
+
+	// Find the handler method from an instance of the each Command Modules
+	if (!is_executed_handler && cmd_name.match(/:([a-zA-Z0-9_]+)$/)) {
+
+		var cmd_name_ = RegExp.$1, commands_list = {};
+		exec_result = {};
+
+		for (var module_name in self.commandModules) {
+
+			var command_handler = self.commandModules[module_name].instance || null;
+			commands_list = self.commandModules[module_name].commands || null;
+			if (!command_handler || !commands_list) continue;
+
+			exec_result = self._execCmdOnCommandHandler(cmd_name_, cmd_args, callback_runner, command_handler, commands_list);
+
+			if (exec_result.isWontResponse) is_wont_response = true;
+			if (exec_result.isExecuted) {
+				executed_module_name = module_name;
+				is_executed_handler = true;
+				break;
+			}
+		}
+	}
+
+	// Done
+	if (is_executed_handler) {
+		if (self.isDebugMode) self.logDebug('_onCmdMessage', 'Command executed: ' + cmd_name + ' on ' + executed_module_name);
+		if (is_wont_response) callback_runner.send(null, 'Command executed');
+	} else {
+		self.logDebug('_onCmdMessage', 'Not found the matched command handler to ' + cmd_name);
+	}
+
+};
+
+
+/**
+ * Execute the command on the CommandHandler
+ * @param  {String} cmd_name             Name of the receivec command
+ * @param  {Object} cmd_args             Arguments of the received command
+ * @param  {CallbackRunner} cb_runner    Callback runner for response
+ * @param  {CommandHandler} cmd_handler  Instance of the commands handler
+ * @param  {Object} cmds_list            Map of the commands of this commands handler
+ * @return {Object}
+ */
+DenHubDevice.prototype._execCmdOnCommandHandler = function (cmd_name, cmd_args, cb_runner, cmd_handler, cmds_list) {
+
+	var self = this;
+
+	var is_wont_response = false;
+	var is_executed_handler = false;
+
 	// Find the handler method from an instance of CommandsHandler
-	var commands_list = self.config.commands || self.config.cmds;
-	var is_executed_handler = false, is_wont_response = false;
-	for (var key in commands_list) {
+	for (var key in cmds_list) {
 
 		if (key == cmd_name) {
 
 			try {
 				// Execute the handler method
-				is_wont_response = self.commandsHandler[key](cmd_args, callback_runner);
+				is_wont_response = cmd_handler[key](cmd_args, cb_runner);
 				is_executed_handler = true;
 			} catch (e) {
 				self.logWarn('_onCmdMessage', 'Error occurred in the command handler: ' + cmd_name + '\n' + e.stack.toString());
@@ -356,19 +417,18 @@ DenHubDevice.prototype._onCmdMessage = function (data) {
 
 	}
 
-	if (!is_executed_handler) {
-		self.logDebug('_onCmdMessage', 'Not found the matched command handler to ' + cmd_name);
-	} else if (is_wont_response) {
-		callback_runner.send(null, 'Command executed');
-	}
+	return {
+		isWontResponse: is_wont_response,
+		isExecuted: is_executed_handler
+	};
 
 };
 
 
 /**
- * Initialize an instance of the each plugins
+ * Load the instances of the each plugins
  */
-DenHubDevice.prototype._initPlugins = function (plugin_name, callback) {
+DenHubDevice.prototype._initPlugins = function (callback) {
 
 	var self = this;
 
@@ -417,13 +477,88 @@ DenHubDevice.prototype._initPlugins = function (plugin_name, callback) {
 
 
 /**
+ * Load the instances of the each command modules
+ */
+DenHubDevice.prototype._initCommandModules = function () {
+
+	var self = this;
+
+	self.commandModules = {};
+
+	var fs = require('fs');
+
+	// Find a commands handler module from the module directory
+	var shared_commands_search_path = process.cwd() + '/node_modules';
+	var dir_list = [];
+	try {
+		dir_list = fs.readdirSync(shared_commands_search_path + '/');
+	} catch (e) {
+		return;
+	}
+
+	dir_list.forEach(function (node_module_name) {
+		if (node_module_name.match(/^denhub-device-(.+)$/)) {
+
+			var module_name = RegExp.$1;
+
+			// Initialize the item of this module on commandModules
+			self.commandModules[module_name] = {
+				commands: {},
+				instance: null
+			};
+
+		}
+	});
+
+	// Initialize the logger and helper for the modules
+	var ch_logger = new HandlerLogger(this);
+	var handler_helper = new HandlerHelper(this);
+
+	// Initialize the commands modules
+	for (var module_name in self.commandModules) {
+
+		var dir_path = shared_commands_search_path + '/denhub-device-' + module_name;
+		self.logDebug('_initCommandModules', 'Initialize a commands handler of the module: ' + dir_path);
+
+		// Make an configuration for this module
+		var ch_config = util._extend({}, self.config);
+		ch_config.denhubServerHost = null; // for security reason
+		ch_config.serverToken = null; // for security reason
+
+		// Read the commands definition of this module
+		try {
+			ch_config.commands = helper.getCommandsByCommandModulePath(dir_path);
+		} catch (e) {
+			self.logWarn('_initCommandModules', e.stack.toString());
+		}
+
+		self.commandModules[module_name].commands = ch_config.commands;
+
+		// Initialize an instance of the CommandsHandler of this module
+		var instance = null;
+		try {
+			var CommandsHandlerClass = require(dir_path);
+			instance = new CommandsHandlerClass(ch_config, ch_logger, handler_helper);
+		} catch (e) {
+			self.logWarn('_initCommandModules', e.stack.toString());
+		}
+
+		self.commandModules[module_name].instance = instance;
+
+	}
+
+};
+
+
+/**
  * Send a device manifest to the server
  */
 DenHubDevice.prototype._sendManifest = function () {
 
 	var self = this;
 
-	var manifest = self.config;
+	// Clone the configuration object
+	var manifest = JSON.parse(JSON.stringify(self.config));
 
 	// Call a hook of the plugins
 	for (var plugin_name in self.pluginInstances) {
@@ -440,6 +575,21 @@ DenHubDevice.prototype._sendManifest = function () {
 	// Add a package name and version from the package.json
 	manifest.deviceDaemon = helper.getPackageInfo().name + '/' + helper.getPackageInfo().version;
 
+	// Add the information of the each command modules
+	manifest.commandModuleNames = [];
+	for (var module_name in self.commandModules) {
+
+		// Add the name of this module
+		manifest.commandModuleNames.push(module_name);
+
+		// Add the commands of this module
+		var module_commands = self.commandModules[module_name].commands;
+		for (var command_name in module_commands) {
+			manifest.commands[module_name + ':' + command_name] = module_commands[command_name];
+		}
+
+	}
+
 	// Send to server
 	var manifest_json = JSON.stringify({
 		cmd: '_sendManifest',
@@ -448,7 +598,10 @@ DenHubDevice.prototype._sendManifest = function () {
 	self.webSocket.send(manifest_json);
 
 	if (self.isDebugMode) {
-		self.logDebug('ws', 'Send a manifest to the server:\n' + manifest_json);
+		self.logDebug('ws', 'Send a manifest to the server:\n' + JSON.stringify({
+			cmd: '_sendManifest',
+			args: manifest
+		}, null, '  '));
 	} else {
 		self.logDebug('ws', 'Send a manifest to the server');
 	}
