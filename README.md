@@ -53,8 +53,7 @@ please create your server before you trying to run the following steps.
 
 	? The package.json was generated. Would you write it to package.json ? Yes
 
-
-	$ npm install
+	? The required modules are not installed. Would you install it now ? Yes
 
 
 Run the daemon as development mode:
@@ -92,7 +91,8 @@ Format:
 
 It describes an event handler for the each commands.
 
-You can generate the scaffold for handler.js from commands.json using ``denhub-device-generator`` command.
+You can generate the scaffold for handler.js from commands.json using ``denhub-device-generator``.
+That command can be installed using ``npm install -g denhub-device``.
 
 ### config.json
 

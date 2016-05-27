@@ -21,26 +21,30 @@ console.log('>> DenHub-Device Generator <<\n\
 // Parse the arguments
 var argv = minimist(process.argv.slice(2));
 var config = {};
+var is_all_yes = argv.yes || argv.y || false;
 if (argv.init | argv.i) { // Manifest Generator Mode
 
 	// Read the configuration file
 	config = helper.getConfig(true); // Allow the incomplete configuration file
 
-	// Run the configuration generator
-	generateConfig(config);
+	// Run the configuration generator & the code generator
+	generateConfig(config, is_all_yes);
 
 } else if (argv.help | argv.h) { // Help mode
 
-	var help = 'denhub-device-generator [--init|-i] [--help|-h]\n\n\
+	var help = 'denhub-device-generator [-i|--init] [-y|--yes] [-h|--help]\n\n\
 \
---init\n\
+-i, --init\n\
 	Run the Configuration Generator and the Code Generator\n\
 \n\
---help\n\
+-y, --yes \n\
+	Respond yes to the all confirmation of the generators.\n\
+\n\
+-h, --help\n\
 	Print this help message\n\
 \n\
 \n\
-NOTE: If you not specified any options,\n\
+NOTE: If you not specified "init" or "help" options,\n\
 	this command runs only the Code Generator.\n';
 
 	console.log(help);
@@ -51,7 +55,7 @@ NOTE: If you not specified any options,\n\
 	config = helper.getConfig(false);
 
 	// Generate the source code of the device
-	generateCode(config);
+	generateCode(config, is_all_yes);
 
 }
 
@@ -61,8 +65,9 @@ NOTE: If you not specified any options,\n\
 /**
  * Generate the configuration file
  * @param  {Object} old_config Current configuration
+ * @param  {Boolea} is_all_yes  Whether the response will choose yes automatically
  */
-function generateConfig (old_config) {
+function generateConfig (old_config, is_all_yes) {
 
 	var self = this;
 
@@ -130,6 +135,9 @@ function generateConfig (old_config) {
 		var formatted_json = JSON.stringify(config,  null, '    ');
 		console.log('\n\n' + formatted_json + '\n');
 
+		// To skip mode
+		if (is_all_yes) return {confirmSaveConfig: true};
+
 		// Confirmation for save the configuration file
 		inquirer.prompt([{
 			type: 'confirm',
@@ -166,6 +174,10 @@ function generateConfig (old_config) {
 
 			console.log(commands_tmpl);
 
+			// To skip mode
+			if (is_all_yes) return {confirmSaveCommands: true};
+
+			// Confirm to user
 			return inquirer.prompt([{
 				type: 'confirm',
 				name: 'confirmSaveCommands',
@@ -185,6 +197,9 @@ function generateConfig (old_config) {
 
 		}).then(function (is_wrote) {
 
+			// To skip mode
+			if (is_all_yes) return {continueConfirm: true};
+
 			// Confirmation for continue
 			return inquirer.prompt([{
 				type: 'confirm',
@@ -200,7 +215,7 @@ function generateConfig (old_config) {
 			}
 
 			// Generate the source code of the device
-			generateCode(config);
+			generateCode(config, is_all_yes);
 
 		});
 
@@ -211,9 +226,10 @@ function generateConfig (old_config) {
 
 /**
  * Generate the source code for device daemon
- * @param  {Object} config Device configuration
+ * @param  {Object} config      Device configuration
+ * @param  {Boolea} is_all_yes  Whether the response will choose yes automatically
  */
-function generateCode (config) {
+function generateCode (config, is_all_yes) {
 
 	console.log(colors.bold('--------------- Code Generator ---------------\n'));
 
@@ -223,7 +239,7 @@ function generateCode (config) {
 	}
 
 	// Start the processes
-	var entry_js = null, handler_js = null, package_json = null;
+	var entry_js = null, handler_js = null, package_json = null, is_modules_installed = false;
 	Promise.resolve()
 	.then(function () {
 
@@ -232,6 +248,9 @@ function generateCode (config) {
 
 		// Preview of the entry point script
 		console.log(entry_js);
+
+		// To skip mode
+		if (is_all_yes) return {confirmSaveEntryJs: true};
 
 		// Confirm to user
 		return inquirer.prompt([{
@@ -261,6 +280,9 @@ function generateCode (config) {
 
 		// Preview of the commands handler script
 		console.log(handler_js);
+
+		// To skip mode
+		if (is_all_yes) return {confirmSaveHandlerJs: true};
 
 		// Confirm to user
 		return inquirer.prompt([{
@@ -295,6 +317,9 @@ function generateCode (config) {
 		// Preview of the package.json
 		console.log(package_json + '\n');
 
+		// To skip mode
+		if (is_all_yes) return {confirmSavePackageJson: true};
+
 		// Confirm to user
 		return inquirer.prompt([{
 			type: 'confirm',
@@ -315,7 +340,44 @@ function generateCode (config) {
 		console.log('Writing has been completed.\n\n');
 		return true;
 
-	}).then(function () {
+	}).then(function (result) {
+
+		// Confirm to whether the dependency modules are installed
+		var dir_list = [];
+		try {
+			dir_list = fs.readdirSync('./node_modules/');
+		} catch (e) {
+			dir_list = [];
+		}
+
+		is_modules_installed = false;
+		dir_list.forEach(function (name, i) {
+			if (name == 'denhub-device') {
+				is_modules_installed = true;
+			}
+		});
+
+		if (is_modules_installed || is_all_yes) {
+			return {confirmDependencyInstall: false};
+		}
+
+		// Confirm to user
+		return inquirer.prompt([{
+			type: 'confirm',
+			name: 'confirmDependencyInstall',
+			message: 'The required modules are not installed. Would you install it now ?'
+		}]);
+
+	}).then(function (answer) {
+
+		if (!answer.confirmDependencyInstall) {
+			return false;
+		}
+
+		// Install the dependency modules
+		return execDependencyInstall();
+
+	}).then(function (result) {
 
 		console.log(colors.bold.green('\nAll was completed.'));
 
@@ -326,8 +388,8 @@ function generateCode (config) {
 		}
 
 		// Show the guide
-		console.log(colors.bold('Enjoy :)'));
-		console.log('\n$ npm install');
+		console.log(colors.bold('Enjoy :)\n'));
+		if (!is_modules_installed) console.log('$ npm install');
 		console.log('$ npm start -- --development\n');
 		console.log('For details, please refer to https://github.com/odentools/denhub-device/\n');
 
@@ -516,5 +578,42 @@ function generatePackageJson (config) {
 
 	// Done
 	return JSON.stringify(user_json,  null, '  ');
+
+}
+
+
+/**
+ * Install the dependency modules with using npm command
+ * @return {Boolean} Whether the install has been successful
+ */
+function execDependencyInstall () {
+
+	console.log('\nExecuting npm install command...');
+
+	return new Promise(function(resolve, reject){
+
+		var child = require('child_process').spawn('npm', ['install'], {
+			cwd: process.cwd,
+			detached: false,
+			env: process.env,
+			stdio: [process.stdin, process.stdout, process.stderr]
+		});
+
+		child.on('error', function (error) {
+			console.error(colors.bold.red('ERROR: Could not install the required modules:'));
+			console.error(error.stack.toString());
+			process.exit(255);
+		});
+
+		child.on('close', function (exit_code) {
+			if (exit_code !== 0) {
+				console.error(colors.bold.red('\nERROR: npm install has been failed.'));
+				process.exit(255);
+			}
+			console.log('\nnpm install has been completed.\n\n');
+			resolve(true);
+		});
+
+	});
 
 }
