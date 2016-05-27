@@ -67,10 +67,10 @@ module.exports = {
 		if (opt_config_filename) {
 			config_paths.push(opt_config_filename);
 		} else {
-			// root of denhub-device directory
-			config_paths.push(__dirname + '/../config.json');
 			// root of dependence source directory
 			config_paths.push('./config.json');
+			// root of denhub-device directory
+			config_paths.push(__dirname + '/../config.json');
 		}
 
 		var config_file = null;
@@ -94,7 +94,7 @@ module.exports = {
 		var config = {};
 		if (config_file) {
 			try {
-				config = JSON.parse(config_file);
+				config = JSON.parse(config_file.toString());
 			} catch (e) {
 				if (!is_ignore_errors) throw e;
 			}
@@ -128,10 +128,10 @@ module.exports = {
 
 		var file_paths = [];
 
-		// root of denhub-device directory
-		file_paths.push(__dirname + '/../commands.json');
 		// root of dependence source directory
 		file_paths.push('./commands.json');
+		// root of denhub-device directory
+		file_paths.push(__dirname + '/../commands.json');
 
 		var file = null;
 		for (var i = 0, l = file_paths.length; i < l; i++) {

@@ -128,11 +128,18 @@ function generateConfig (old_config, is_all_yes) {
 			answer.deviceToken = null;
 		}
 
-		var config = answer;
-		config.commands = old_config.commands || {};
+		// Clone the configuration object
+		var save_config = JSON.parse(JSON.stringify(old_config || {}));
+		for (var key in answer) {
+			config[key] = answer[key];
+			save_config[key] = answer[key];
+		}
+		if (save_config.commands) {
+			delete save_config.commands;
+		}
 
 		// Preview of the configuration file
-		var formatted_json = JSON.stringify(config,  null, '    ');
+		var formatted_json = JSON.stringify(save_config,  null, '    ');
 		console.log('\n\n' + formatted_json + '\n');
 
 		// To skip mode
@@ -215,6 +222,7 @@ function generateConfig (old_config, is_all_yes) {
 			}
 
 			// Generate the source code of the device
+			config.commands = old_config.commands || {};
 			generateCode(config, is_all_yes);
 
 		});
