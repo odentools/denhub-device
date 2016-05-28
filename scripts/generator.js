@@ -142,18 +142,26 @@ function generateConfig (old_config, is_all_yes) {
 		var formatted_json = JSON.stringify(save_config,  null, '    ');
 		console.log('\n\n' + formatted_json + '\n');
 
-		// To skip mode
-		if (is_all_yes) return {confirmSaveConfig: true};
+		// To next step
+		var promise = null;
+		if (is_all_yes) {
+			promise = new Promise(function (resolve, reject) {
+				resolve({
+					isSaveConfig: false
+				});
+			});
+		} else {
+			// Confirmation for save the configuration file
+			promise = inquirer.prompt([{
+				type: 'confirm',
+				name: 'isSaveConfig',
+				message: 'The configuration file was generated. Would you write it to ' + CONFIG_FILENAME + ' ?'
+			}]);
+		}
 
-		// Confirmation for save the configuration file
-		inquirer.prompt([{
-			type: 'confirm',
-			name: 'confirmSaveConfig',
-			message: 'The configuration file was generated. Would you write it to ' + CONFIG_FILENAME + ' ?'
+		promise.then(function (answer) {
 
-		}]).then(function (answer) {
-
-			if (!answer.confirmSaveConfig) return false;
+			if (!answer.isSaveConfig) return false;
 
 			// Save the configuration file
 			console.log('\nWriting to ' + process.cwd() + '/' + CONFIG_FILENAME);
@@ -175,25 +183,25 @@ function generateConfig (old_config, is_all_yes) {
 			if (commands_file != null) {
 				// Skip
 				return {
-					confirmSaveCommands: false
+					isSaveCommands: false
 				};
 			}
 
 			console.log(commands_tmpl);
 
 			// To skip mode
-			if (is_all_yes) return {confirmSaveCommands: true};
+			if (is_all_yes) return {isSaveCommands: true};
 
 			// Confirm to user
 			return inquirer.prompt([{
 				type: 'confirm',
-				name: 'confirmSaveCommands',
+				name: 'isSaveCommands',
 				message: 'The commands file was not found. Would you write the example to ' + COMMANDS_FILENAME + ' ?'
 			}]);
 
 		}).then(function (answer) {
 
-			if (!answer.confirmSaveCommands) return false;
+			if (!answer.isSaveCommands) return false;
 
 			// Save the commands file
 			console.log('\nWriting to ' + process.cwd() + '/' + COMMANDS_FILENAME);
@@ -205,21 +213,23 @@ function generateConfig (old_config, is_all_yes) {
 		}).then(function (is_wrote) {
 
 			// To skip mode
-			if (is_all_yes) return {continueConfirm: true};
+			if (is_all_yes) return {isGenerateCode: true};
 
 			// Confirmation for continue
 			return inquirer.prompt([{
 				type: 'confirm',
-				name: 'continueConfirm',
+				name: 'isGenerateCode',
 				message: 'Would you generate the source code now ?'
 			}]);
 
 		}).then(function (answer) {
 
-			if (!answer.continueConfirm) {
+			if (!answer.isGenerateCode) {
 				console.log(colors.bold.green('\nAll was completed :)'));
 				return;
 			}
+
+			console.log('\n');
 
 			// Generate the source code of the device
 			config.commands = old_config.commands || {};
@@ -258,18 +268,18 @@ function generateCode (config, is_all_yes) {
 		console.log(entry_js);
 
 		// To skip mode
-		if (is_all_yes) return {confirmSaveEntryJs: true};
+		if (is_all_yes) return {isSaveEntryJs: true};
 
 		// Confirm to user
 		return inquirer.prompt([{
 			type: 'confirm',
-			name: 'confirmSaveEntryJs',
+			name: 'isSaveEntryJs',
 			message: 'The entry point was generated. Would you write it to ' + ENTRY_POINT_FILENAME + ' ?'
 		}]);
 
 	}).then(function (answer) {
 
-		if (!answer.confirmSaveEntryJs) {
+		if (!answer.isSaveEntryJs) {
 			entry_js = null;
 			return false;
 		}
@@ -290,18 +300,18 @@ function generateCode (config, is_all_yes) {
 		console.log(handler_js);
 
 		// To skip mode
-		if (is_all_yes) return {confirmSaveHandlerJs: true};
+		if (is_all_yes) return {isSaveHandlerJs: true};
 
 		// Confirm to user
 		return inquirer.prompt([{
 			type: 'confirm',
-			name: 'confirmSaveHandlerJs',
+			name: 'isSaveHandlerJs',
 			message: 'The commands handler was generated. Would you write it to ' + HANDLER_FILENAME + ' ?'
 		}]);
 
 	}).then(function (answer) {
 
-		if (!answer.confirmSaveHandlerJs) {
+		if (!answer.isSaveHandlerJs) {
 			handler_js = null;
 			return false;
 		}
@@ -319,25 +329,25 @@ function generateCode (config, is_all_yes) {
 		package_json = generatePackageJson(config);
 		if (package_json == null) { // If user's package.json exists and invalid
 			// Skip
-			return { answer: { confirmSavePackageJson: false} };
+			return { answer: { isSavePackageJson: false} };
 		}
 
 		// Preview of the package.json
 		console.log(package_json + '\n');
 
 		// To skip mode
-		if (is_all_yes) return {confirmSavePackageJson: true};
+		if (is_all_yes) return {isSavePackageJson: true};
 
 		// Confirm to user
 		return inquirer.prompt([{
 			type: 'confirm',
-			name: 'confirmSavePackageJson',
+			name: 'isSavePackageJson',
 			message: 'The package.json was generated. Would you write it to package.json ?'
 		}]);
 
 	}).then(function (answer) {
 
-		if (!answer.confirmSavePackageJson) {
+		if (!answer.isSavePackageJson) {
 			package_json = null;
 			return false;
 		}
@@ -366,19 +376,19 @@ function generateCode (config, is_all_yes) {
 		});
 
 		if (is_modules_installed || is_all_yes) {
-			return {confirmDependencyInstall: false};
+			return {isDependencyInstall: false};
 		}
 
 		// Confirm to user
 		return inquirer.prompt([{
 			type: 'confirm',
-			name: 'confirmDependencyInstall',
+			name: 'isDependencyInstall',
 			message: 'The required modules are not installed. Would you install it now ?'
 		}]);
 
 	}).then(function (answer) {
 
-		if (!answer.confirmDependencyInstall) {
+		if (!answer.isDependencyInstall) {
 			return false;
 		}
 
@@ -387,7 +397,7 @@ function generateCode (config, is_all_yes) {
 
 	}).then(function (result) {
 
-		console.log(colors.bold.green('\nAll was completed.'));
+		console.log(colors.bold.green('All was completed.'));
 
 		if (!entry_js && !handler_js) {
 			console.log('');
