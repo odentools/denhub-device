@@ -147,7 +147,7 @@ function generateConfig (old_config, is_all_yes) {
 		if (is_all_yes) {
 			promise = new Promise(function (resolve, reject) {
 				resolve({
-					isSaveConfig: false
+					isSaveConfig: true
 				});
 			});
 		} else {

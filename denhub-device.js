@@ -1,5 +1,5 @@
 /**
- * DenHub-Device
+ * denhub-device
  * https://github.com/odentools/denhub-device
  * (C) 2016 - OdenTools; Released under MIT License.
  */

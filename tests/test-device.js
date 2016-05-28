@@ -1,5 +1,5 @@
 /**
- * Test Script for DenHubDevice with CommandsHandler
+ * Test Script for denhub-device with CommandsHandler
  */
 
 var assert = require('assert'),
@@ -122,7 +122,7 @@ describe('Command Receiving', function () {
 			var data = JSON.parse(message);
 			if (data.cmd != '_sendCmdResponse' || data.args.sourceCmd != 'testWithCallback') return;
 
-			assert.equal('OKAY', data.args.responseSuccess);
+			assert.equal(data.args.responseSuccess, 'OKAY');
 
 			done();
 
