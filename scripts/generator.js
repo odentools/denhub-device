@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Generator for DenHub-Device
+ * Generator for Denhub-Device
  * https://github.com/odentools/denhub-device
  * (C) 2016 - OdenTools; Released under MIT License.
  */
@@ -8,56 +8,60 @@
 'use strict';
 
 var minimist = require('minimist'), inquirer = require('inquirer'),
-	fs = require('fs'), colors = require('colors');
+	fs = require('fs'), colors = require('colors'),
+	SSpecParser = require('s-spec/models/parser');
+
 var helper = require(__dirname + '/../models/helper');
 
 var CONFIG_FILENAME = 'config.json', COMMANDS_FILENAME = 'commands.json',
 	ENTRY_POINT_FILENAME = 'index.js', HANDLER_FILENAME = 'handler.js';
 
-console.log('>> DenHub-Device Generator <<\n\
-(C) 2016 - DenHub IoT Project & OdenTools\n\
+
+// Print the header
+var ver = helper.getPackageInfo().version;
+console.log('\n>> Denhub-Device Generator v' + ver + ' <<\n\
+(C) 2016 - Denhub Project & OdenTools\n\
 --------------------------------------------------\n');
 
 // Parse the arguments
 var argv = minimist(process.argv.slice(2));
 var config = {};
 var is_all_yes = argv.yes || argv.y || false;
-if (argv.init | argv.i) { // Manifest Generator Mode
+
+if (argv._[0] == 'init') { // Manifest Generator Mode
 
 	// Read the configuration file
 	config = helper.getConfig(true); // Allow the incomplete configuration file
 
-	// Run the configuration generator & the code generator
+	// Run the Configuration Generator and the Code Generator
 	generateConfig(config, is_all_yes);
 
-} else if (argv.help | argv.h) { // Help mode
+} else if (argv._[0] == 'commands') { // Command editor mode
 
-	var help = 'denhub-device-generator [-i|--init] [-y|--yes] [-h|--help]\n\n\
-\
--i, --init\n\
-	Run the Configuration Generator and the Code Generator\n\
-\n\
--y, --yes \n\
-	Respond yes to the all confirmation of the generators.\n\
-\n\
--h, --help\n\
-	Print this help message\n\
-\n\
-\n\
-NOTE: If you not specified "init" or "help" options,\n\
-	this command runs only the Code Generator.\n';
+	// Read the configuration file
+	config = helper.getConfig(true);
 
-	console.log(help);
+	// Run the Command Editor
+	startCmdEditor(config);
+
+} else if (argv._[0] == 'help' | argv.help | argv.h) { // Help mode
+
+	printHelp();
+
+} else if (argv._[0] == 'version' | argv.version) { // Version info mode
+
+	process.exit(0);
 
 } else {
 
 	// Read the configuration file
 	config = helper.getConfig(false);
 
-	// Generate the source code of the device
+	// Run the Code Generator
 	generateCode(config, is_all_yes);
 
 }
+
 
 // ----
 
@@ -633,5 +637,598 @@ function execDependencyInstall () {
 		});
 
 	});
+
+}
+
+
+/**
+ * Start the command editor
+ * @param  {Object} config             Current configuration
+ * @param  {Boolean} is_skip_header    Whether the header should be skipped
+ */
+function startCmdEditor (config, is_skip_header) {
+
+	if (!is_skip_header) {
+		console.log(colors.bold('--------------- Command Editor ---------------'));
+	}
+
+	// Show a prompt for choose the mode
+	var promise = inquirer.prompt([{
+		type: 'list',
+		name: 'mode',
+		message: 'What you want to do ?',
+		choices: [
+			'Show commands list', 'Add new command', 'Edit command', 'Delete command'
+		]
+	}]);
+
+	promise.then(function (answer) {
+
+		var mode = answer.mode;
+		var promise = null;
+
+		if (mode == 'Add new command') {
+			promise = addCommandOnCmdEditor(config);
+		} else if (mode == 'Edit command') {
+			promise = editCommandOnCmdEditor(config);
+		} else if (mode == 'Delete command') {
+			promise = deleteCommandOnCmdEditor(config);
+		} else if (mode == 'Show commands list') {
+			promise = showCommandsOnCmdEditor(config);
+		}
+
+		if (!promise) {
+			startCmdEditor(config, true);
+			return;
+		}
+
+		promise.then(function () {
+			startCmdEditor(config, true);
+		});
+
+	});
+
+}
+
+
+/**
+ * Command Editor - Show a list of the commands
+ * @param  {Object} config             Current configuration
+ * @return {Promise}
+ */
+function showCommandsOnCmdEditor (config) {
+
+	console.log(colors.bold('\nAvailable Commands for ' + config.deviceName + ':\n'));
+
+	// Iterate the each commands
+	var commands = config.commands || {};
+	if (Object.keys(commands).length == 0) {
+		console.log ('\nThere is no command.');
+	} else {
+		for (var name in commands) {
+			var desc = commands[name].description || '';
+			console.log(colors.bold('\n' + name + '') + '\n  ' + desc + '\n');
+
+			// Iterate the each arguments
+			var args = commands[name].args || {};
+			if (Object.keys(args).length == 0) {
+				console.log ('\tThe arguments of this command are not defined');
+			} else {
+				for (var arg_name in args) {
+					var arg_spec = args[arg_name] || '';
+					console.log('\t* ' + arg_name + ' - ' + arg_spec);
+				}
+			}
+
+		}
+	}
+
+	console.log('\n');
+
+	// Done
+	return new Promise(function (resolve, reject) {
+		resolve();
+	});
+
+}
+
+
+/**
+ * Command Editor - Add a command
+ * @param  {Object} config             Current configuration
+ * @return {Promise}
+ */
+function addCommandOnCmdEditor (config) {
+
+	var cmd_name = null;
+
+	var promise = inquirer.prompt([{
+		type: 'input',
+		name: 'cmdName',
+		message: 'What is name of a command (e.g. setMotorPower) ?',
+		validate: function (value) {
+			if (value.length == 0) return true;
+			if (config.commands[value] != null) return 'This command name has already existed.';
+			if (!value.match(/^[A-Za-z0-9_]+$/)) return 'Available characters for argument name: A-Z, a-z, 0-9, underscore.\n\
+Or, if you want to cancel, please press the enter key left empty.';
+			return true;
+		}
+
+	}]).then(function (answer) {
+
+		cmd_name = answer.cmdName || null;
+		if (cmd_name == null || cmd_name.length == 0) {
+			return null;
+		}
+
+		return inquirer.prompt([{
+			type: 'input',
+			name: 'cmdDesc',
+			message: 'What is description of ' + cmd_name + ' command ?'
+		}]);
+
+
+	}).then(function (answer) {
+
+		if (cmd_name == null) return false;
+
+		var commands = config.commands || {};
+		commands[cmd_name] = {
+			description: answer.cmdDesc || null,
+			args: {}
+		};
+
+		// Done
+		console.log(colors.bold.green('This command has been created: ' + cmd_name));
+
+		// Save to the commands file
+		console.log('\nWriting to ' + process.cwd() + '/' + COMMANDS_FILENAME);
+		fs.writeFileSync(COMMANDS_FILENAME, JSON.stringify(config.commands));
+		console.log('Writing has been completed.\n\n');
+		return true;
+
+	});
+
+	return promise;
+
+}
+
+
+/**
+ * Command Editor - Delete a command
+ * @param  {Object} config             Current configuration
+ * @return {Promise}
+ */
+function deleteCommandOnCmdEditor (config) {
+
+	var commands = config.commands || {};
+	var command_names = Object.keys(commands);
+	command_names.unshift('<< Cancel');
+
+	var promise = inquirer.prompt([{
+		type: 'list',
+		name: 'cmdName',
+		message: 'Choose the command you want to delete',
+		choices: command_names
+	}]);
+
+	return promise.then(function (answer) {
+
+		if (answer.cmdName == '<< Cancel') {
+			return false;
+		}
+
+		delete config.commands[answer.cmdName];
+
+		// Done
+		console.log(colors.bold.green('\n\nThis command has been deleted: ' + answer.cmdName));
+
+		// Save to the commands file
+		console.log('\nWriting to ' + process.cwd() + '/' + COMMANDS_FILENAME);
+		fs.writeFileSync(COMMANDS_FILENAME, JSON.stringify(config.commands));
+		console.log('Writing has been completed.\n\n');
+
+		return true;
+
+	});
+
+}
+
+
+/**
+ * Command Editor - Edit a command
+ * @param  {Object} config             Current configuration
+ * @return {Promise}
+ */
+function editCommandOnCmdEditor (config) {
+
+	var commands = config.commands || {};
+	var command_names = Object.keys(commands);
+	command_names.unshift('<< Cancel');
+
+	var promise = inquirer.prompt([{
+		type: 'list',
+		name: 'cmdName',
+		message: 'Choose the command you want to edit',
+		choices: command_names
+	}]);
+
+	var cmd_name = null;
+
+	return promise.then(function (answer) {
+
+		if (answer.cmdName == '<< Cancel') {
+			return new Promise(function (resolve, reject) {
+				resolve({editTarget: '<< Cancel'});
+			});
+		}
+
+		cmd_name = answer.cmdName;
+
+		var arg_name = null;
+		var choices = ['<< Cancel', 'Edit command description', 'Add argument'];
+		for (arg_name in config.commands[cmd_name].args || {}) {
+			choices.push('Edit argument - ' + arg_name);
+		}
+		for (arg_name in config.commands[cmd_name].args || {}) {
+			choices.push('Delete argument - ' + arg_name);
+		}
+
+		return inquirer.prompt([{
+			type: 'list',
+			name: 'editTarget',
+			message: 'What you want to do for ' + cmd_name + ' ?',
+			choices: choices
+		}]);
+
+
+	}).then(function (answer) {
+
+		if (answer.editTarget == '<< Cancel') return false;
+
+		if (answer.editTarget == 'Edit command description') {
+
+			// Edit the command description
+			return inquirer.prompt([{
+				type: 'input',
+				name: 'cmdDesc',
+				message: 'command description of ' + cmd_name + ' ?',
+				default: config.commands[cmd_name].description || null
+			}]);
+
+		} else if (answer.editTarget == 'Add argument') {
+
+			return editArgumentOnCmdEditor(config, cmd_name, null);
+
+		} else if (answer.editTarget.match(/^Edit argument - (\S+)$/)) {
+
+			return editArgumentOnCmdEditor(config, cmd_name, RegExp.$1);
+
+		} else if (answer.editTarget.match(/^Delete argument - (\S+)$/)) {
+
+			// Delete the argument
+			return {deleteArgName: RegExp.$1};
+
+		}
+
+
+	}).then(function (answer) {
+
+		if (!answer) return;
+
+		if (answer.cmdDesc) { // Edit description of the command
+			config.commands[cmd_name].description = answer.cmdDesc || null;
+		}
+
+		var arg_spec = null;
+		if (answer.argName && answer.argType) { // Add an argument
+
+			// Make a S-Spec specification
+			arg_spec = answer.argType;
+
+			// Make a S-Spec specification - Limit of range
+			if (answer.min && answer.max) {
+				arg_spec += '(' + answer.min + ',' + answer.max + ')';
+			} else if (answer.max) {
+				arg_spec += '(' + answer.max + ')';
+			}
+
+			// Make a S-Spec specification - Default value
+			if (answer.default) {
+				if (answer.argType == 'STRING' || answer.argType == 'TEXT') {
+					arg_spec += ' DEFAULT ' + '\'' + answer.default + '\'';
+				} else {
+					arg_spec += ' DEFAULT ' + answer.default;
+				}
+			}
+
+			// Make a S-Spec specification - Regex expression
+			if (answer.regExp) {
+				if (answer.argType == 'STRING' || answer.argType == 'TEXT') {
+					answer.regExp = answer.regExp.replace(new RegExp(/\'/, 'g'), '\\\'');
+					arg_spec += ' REGEXP ' + '\'' + answer.regExp + '\'';
+				}
+			}
+
+			// Set to the argument object
+			if (!config.commands[cmd_name].args) config.commands[cmd_name].args = {};
+			config.commands[cmd_name].args[answer.argName] = arg_spec;
+
+			console.log(colors.bold.green('\n\nThis argument has been created: ' + answer.argName)
+				+ ' - ' + arg_spec);
+		}
+
+		if (answer.deleteArgName) { // Delete an argument
+
+			arg_spec = config.commands[cmd_name].args[answer.deleteArgName] || '';
+			delete config.commands[cmd_name].args[answer.deleteArgName];
+
+			console.log(colors.bold.green('\n\nThis argument has been deleted: ' + answer.deleteArgName
+				+ ' - ' + arg_spec));
+
+		}
+
+		// Save to the commands file
+		console.log('\nWriting to ' + process.cwd() + '/' + COMMANDS_FILENAME);
+		var json = JSON.stringify(config.commands, null, '    ');
+		fs.writeFileSync(COMMANDS_FILENAME, json);
+		console.log('Writing has been completed.\n\n');
+
+	});
+
+}
+
+
+/**
+ * Command Editor - Add / Edit an argument of the command
+ * @param  {Object} config             Current configuration
+ * @param  {String} cmd_name           Commane name
+ * @param  {String} opt_arg_name       Argument name
+ * @return {Promise}
+ */
+function editArgumentOnCmdEditor (config, cmd_name, opt_arg_name) {
+
+	var ARG_TYPES = [
+		'<< Cancel', 'BOOLEAN', 'FLOAT', 'INTEGER', 'NUMBER', 'STRING' //, 'TEXT'
+	];
+
+	// Prepare the required inputs
+	var require_inputs = [];
+	var arg = {};
+	if (opt_arg_name) { // Edit the existed argument
+
+		// Parse a specification of the existed argument
+		arg.argName = opt_arg_name;
+		var arg_spec = config.commands[cmd_name].args[opt_arg_name];
+		try {
+			var sspec = new SSpecParser(arg_spec);
+			arg.argType = sspec.type;
+			if (sspec.default != null) {
+				arg.default = sspec.default.toString();
+			} else {
+				arg.default = null;
+			}
+			if (sspec.min != null) {
+				arg.min = sspec.min.toString();
+			} else {
+				arg.min = null;
+			}
+			if (sspec.max != null) {
+				arg.max = sspec.max.toString();
+			} else {
+				arg.max = null;
+			}
+			if (sspec.regExp != null) {
+				var regexp_str = sspec.regExp.toString().replace(new RegExp('(^\/|\/$)', 'g'), '');
+				regexp_str = regexp_str.replace(new RegExp('\\\\\'', 'g'), '\'');
+				arg.regExp = regexp_str;
+			} else {
+				arg.regExp = null;
+			}
+		} catch (e) {
+			arg.argType = null;
+			arg.default = null;
+			arg.min = null;
+			arg.max = null;
+			arg.regExp = null;
+		}
+
+		// Prepare the required inputs
+		require_inputs = [
+			{
+				type: 'list',
+				name: 'argType',
+				default: arg.argType,
+				message: 'Type of ' + arg.argName + ' ?',
+				choices: ARG_TYPES
+			}
+		];
+
+	} else { // Add a new argument
+
+		require_inputs = [
+			{
+				type: 'input',
+				name: 'argName',
+				message: 'Name of a new argument (e.g. value) ?',
+				validate: function (value) {
+					if (value.length == 0 && !value.match(/^[A-Za-z0-9_]+$/)) return 'Available characters for argument name: A-Z, a-z, 0-9, underscore';
+					return true;
+				}
+			},
+			{
+				type: 'list',
+				name: 'argType',
+				message: 'Type of a new argument ?',
+				choices: ARG_TYPES
+			}
+		];
+
+	}
+
+	// Show the required inputs
+	var promise = inquirer.prompt(require_inputs);
+
+	// Additional processing
+	return promise.then(function (answer) {
+
+		// Process the answer of the required inputs
+		arg.argName = answer.argName || arg.argName;
+		arg.argType = answer.argType;
+
+		// Prepare & Show the additional inputs
+		var promise = null;
+		if (answer.argType == 'STRING' || answer.argType == 'TEXT') {
+
+			// Additional inputs for the string argument
+			promise = inquirer.prompt([
+				{
+					type: 'input',
+					name: 'default',
+					message: 'Default value (Optional) ?',
+					default: arg.default || null
+				},
+				{
+					type: 'input',
+					name: 'min',
+					message: 'Minimum length (optional) ?',
+					default: arg.min,
+					validate: function (value) {
+						if (value.toString().length != 0 && value.toString() != 'NULL' && !value.toString().match(/^[0-9]+$/)) {
+							return 'Available characters for Minimum length: 0-9\n\
+You can also disabled by to input a NULL.';
+						}
+						return true;
+					}
+				},
+				{
+					type: 'input',
+					name: 'max',
+					message: 'Maximum length (optional) ?',
+					default: arg.max,
+					validate: function (value) {
+						if (value.toString().length != 0 && value.toString() != 'NULL' && !value.toString().match(/^[0-9]+$/)) {
+							return 'Available characters for Maximum length: 0-9\n\
+You can also disabled by to input a NULL.';
+						}
+						return true;
+					}
+				},
+				{
+					type: 'input',
+					name: 'regExp',
+					message: 'Regex Expression (optional) ?',
+					default: arg.regExp,
+					validate: function (value) {
+						if (value.toString().length != 0 && value.toString() != 'NULL') {
+							try {
+								var exp = new RegExp(value);
+							} catch (e) {
+								return 'Entered regex expression are invalid.\n\
+You can also disabled by to input a NULL.';
+							}
+						}
+						return true;
+					}
+				}
+			]);
+
+		} else if (answer.argType == 'INTEGER' || answer.argType == 'NUMBER' || answer.argType == 'FLOAT') {
+
+			// Additional inputs for the number argument
+			promise = inquirer.prompt([
+				{
+					type: 'input',
+					name: 'default',
+					message: 'Default value (Optional) ?',
+					default: arg.default,
+					validate: function (value) {
+						if (value.toString().length != 0 && value.toString() != 'NULL' && !value.toString().match(/^[0-9\.]+$/)) {
+							return 'Available characters for Default value: 0-9, point\n\
+You can also disabled by to input a NULL.';
+						}
+						return true;
+					}
+				},
+				{
+					type: 'input',
+					name: 'min',
+					message: 'Minimum value (optional) ?',
+					default: arg.min,
+					validate: function (value) {
+						if (value.toString().length != 0 && value.toString() != 'NULL' && !value.toString().match(/^[0-9\.]+$/)) {
+							return 'Available characters for Minimum value: 0-9, point\n\
+You can also disabled by to input a NULL.';
+						}
+						return true;
+					}
+				},
+				{
+					type: 'input',
+					name: 'max',
+					message: 'Maximum value (optional) ?',
+					default: arg.max,
+					validate: function (value) {
+						if (value.toString().length != 0 && value.toString() != 'NULL' && !value.toString().match(/^[0-9\.]+$/)) {
+							return 'Available characters for Maximum value: 0-9, point\n\
+You can also disabled by to input a NULL.';
+						}
+						return true;
+					}
+				}
+			]);
+
+		}
+
+		return promise.then(function (answer) {
+
+			if (answer.default && answer.default == 'NULL') answer.default = null;
+			if (answer.min && answer.min == 'NULL') answer.min = null;
+			if (answer.max && answer.max == 'NULL') answer.max = null;
+			if (answer.regExp && answer.regExp == 'NULL') answer.regExp = null;
+
+			// Return the created arguments
+			return ({
+				argName: arg.argName,
+				argType: arg.argType,
+				default: answer.default,
+				min: answer.min,
+				max: answer.max,
+				regExp: answer.regExp
+			});
+
+		});
+
+	});
+
+}
+
+
+/**
+ * Print the help message
+ */
+function printHelp () {
+
+	var help = 'denhub-device-generator MODE [-y|--yes] [-h|--help]\n\
+\n\
+MODE:\n\
+\n\
+	commands	Run the Command Editor\n\
+	help		Print this help message\n\
+	init		Run the Configuration Generator and the Code Generator\n\
+	version		Print the version\n\
+\n\
+	If you not specified the MODE, the command runs only the Code Generator.\n\
+\n\
+\n\
+OPTIONS:\n\
+\n\
+	-y, --yes \n\
+	Respond yes to the all confirmation of the generators.\n\
+	-h, --help \n\
+	Print this help message. Alias of help mode.\n\
+\n';
+
+	console.log(help);
 
 }

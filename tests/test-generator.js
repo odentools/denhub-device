@@ -31,9 +31,9 @@ describe('Execution of Generator', function () {
 	});
 
 	// Test - Execute the generator as init mode
-	it('Execute with --init && --yes', function (done) {
+	it('Execute as init mode with --yes option', function (done) {
 
-		var gen = spawn('node', [__dirname + '/../scripts/generator.js', '--init', '--yes'], {
+		var gen = spawn('node', [__dirname + '/../scripts/generator.js', 'init', '--yes'], {
 			cwd: work_dir_path,
 			env: process.env
 		});
