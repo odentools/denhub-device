@@ -397,6 +397,7 @@ function generateCode (config, is_all_yes) {
 		}
 
 		// Install the dependency modules
+		is_modules_installed = true;
 		return execDependencyInstall();
 
 	}).then(function (result) {

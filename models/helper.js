@@ -87,7 +87,7 @@ module.exports = {
 			console.log(colors.bold.red('Error: Could not read the configuration file.'));
 			console.log(config_paths.join('\n'));
 			console.log(colors.bold('If you never created it, please try the following command:'));
-			console.log('$ denhub-device-generator --init\n');
+			console.log('$ denhub-device-generator init\n');
 			process.exit(255);
 		}
 
