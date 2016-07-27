@@ -1079,7 +1079,19 @@ function editArgumentOnCmdEditor (config, cmd_name, opt_arg_name) {
 
 		// Prepare & Show the additional inputs
 		var promise = null;
-		if (answer.argType == 'STRING' || answer.argType == 'TEXT') {
+		if (answer.argType == 'BOOLEAN') {
+
+			// Additional inputs for the string argument
+			promise = inquirer.prompt([
+				{
+					type: 'input',
+					name: 'default',
+					message: 'Default value (Optional) ?',
+					default: arg.default || null
+				}
+			]);
+
+		} else if (answer.argType == 'STRING' || answer.argType == 'TEXT') {
 
 			// Additional inputs for the string argument
 			promise = inquirer.prompt([
