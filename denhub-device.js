@@ -27,6 +27,7 @@ var DenHubDevice = function (CommandsHandlerModel, opt_config) {
 
 	// WebSocket Connection
 	this.webSocket = null;
+	this.heartbeatTimer = null;
 
 	// Instances of the plugins
 	this.pluginInstances = {};
@@ -63,6 +64,9 @@ var DenHubDevice = function (CommandsHandlerModel, opt_config) {
 
 	// Interval time (millisec) for restarting when the fatal error occurred
 	this.config.restartDelayTime = this.config.restartDelayTime || 6000;
+
+	// Interval time (millisec) for heartbeat sending
+	this.config.heartbeatIntervalTime = this.config.heartbeatIntervalTime || 10000;
 
 };
 
@@ -102,6 +106,11 @@ DenHubDevice.prototype.start = function (opt_callback) {
 	});
 	ws_url = self.config.denhubServerHost + ws_url;
 
+	// Reset the heartbeat timer
+	if (self.heartbeatTimer != null) {
+		clearInterval(self.heartbeatTimer);
+	}
+
 	// Connect to the WebSocket Server
 	if (self.config.isDebugMode) {
 		self.logInfo('start', 'Connecting to server... ' + ws_url);
@@ -132,12 +141,44 @@ DenHubDevice.prototype.start = function (opt_callback) {
 			self._sendManifest();
 		}, 100);
 
+		// Start the heartbeat sending
+		if (self.heartbeatTimer != null) {
+			clearInterval(self.heartbeatTimer);
+		}
+		self.heartbeatTimer = setInterval(function() {
+
+			try {
+
+				// Send a heartbeat
+				self.webSocket.send(JSON.stringify({
+					cmd: '_sendHeartbeat',
+					args: {},
+					sentAt: new Date().getTime()
+				}));
+
+			} catch (e) {
+
+				clearInterval(self.heartbeatTimer);
+				self.logError('ws', 'Could not sent a heartbeat - ' + e.stack);
+
+				// Re-connect
+				self.logWarn('ws', ' Reconnecting...');
+				setTimeout(function () {
+					self.start();
+				}, self.config.reconnectDelayTime);
+
+			}
+		}, self.config.heartbeatIntervalTime);
+
+		// Call the callback
 		if (opt_callback) opt_callback(null, self.webSocket);
 
 	});
 
 	// Set the event listener - Connection Closed
 	self.webSocket.on('close', function() {
+
+		clearInterval(self.heartbeatTimer);
 
 		if (opt_callback) opt_callback(new Error('Connection closed'), null);
 		if (self.isDebugMode) throw new Error('Connection closed');
