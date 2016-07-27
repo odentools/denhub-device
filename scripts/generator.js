@@ -413,7 +413,7 @@ function generateCode (config, is_all_yes) {
 		// Show the guide
 		console.log(colors.bold('Enjoy :)\n'));
 		if (!is_modules_installed) console.log('$ npm install');
-		console.log('$ npm start -- --development\n');
+		console.log('$ npm start -- --dev\n');
 		console.log('For details, please refer to https://github.com/odentools/denhub-device/\n');
 
 	});

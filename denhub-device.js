@@ -43,7 +43,7 @@ var DenHubDevice = function (CommandsHandlerModel, opt_config) {
 	this.commandsHandler = new CommandsHandlerModel(this.config, ch_logger, handler_helper);
 
 	// Check the command arguments
-	if (process.argv.indexOf('--development') != -1) {
+	if (process.argv.indexOf('--dev') != -1 || process.argv.indexOf('--development') != -1) {
 		this.config.isDebugMode = true;
 	}
 

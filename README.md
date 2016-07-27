@@ -58,7 +58,7 @@ please create your server before you trying to run the following steps.
 
 Run the daemon as development mode:
 
-	$ npm start -- --development
+	$ npm start -- --dev
 
 Run the daemon as production mode:
 
